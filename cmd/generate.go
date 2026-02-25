@@ -5,9 +5,13 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -16,6 +20,23 @@ import (
 	"github.com/mozilla-ai/any-llm-go/providers/gemini"
 	"github.com/mozilla-ai/any-llm-go/providers/openai"
 )
+
+type Course struct {
+	ID          string   `json:"course_id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Language    string   `json:"language"`
+	Lessons     []Lesson `json:"lessons"`
+}
+
+type Lesson struct {
+	ID              string   `json:"lesson_id"`
+	Title           string   `json:"title"`
+	Slides          []string `json:"slides"`
+	TaskDescription string   `json:"task_description"`
+	InitialCode     string   `json:"initial_code"`
+	FileName        string   `json:"file_name"`
+}
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
@@ -39,11 +60,36 @@ AI will create lessons, including slides and coding exercises.`,
 			return
 		}
 		fmt.Println("Input >", prompt)
-		generation(prompt)
+
+		titleChan := make(chan string)
+
+		courseTitle := ""
+
+		s := spinner.New().
+			Title("Waiting for LLM...")
+		s.Action(func() {
+			go func() {
+				for newTitle := range titleChan {
+					s.Title(newTitle)
+				}
+			}()
+
+			courseTitle = generation(prompt, titleChan)
+
+			close(titleChan)
+		})
+
+		err = s.Run()
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+		if courseTitle != "" {
+			fmt.Println("Course generated:", courseTitle)
+		}
 	},
 }
 
-func generation(prompt string) {
+func generation(prompt string, ch chan string) string {
 	activeProvider := viper.GetString("active_provider")
 	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
 	activeApiKey := viper.GetString(fmt.Sprintf("providers.%s.api_key", activeProvider))
@@ -61,30 +107,131 @@ func generation(prompt string) {
 	default:
 		fmt.Printf("Error: Provider '%s' is not supported or not configured.\n", activeProvider)
 		fmt.Println("Please run 'progoat config' first.")
-		return
+		return ""
 	}
 
 	if err != nil {
 		fmt.Println("Error initializing model:", err)
-		return
+		return ""
 	}
 	ctx := context.Background()
 	chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
 		Model: activeModel,
 		Messages: []anyllm.Message{
+			{
+				Role: anyllm.RoleSystem,
+				Content: `You are a professional coding instructor. Your task is to generate a structured programming course based on the user's topic. 
+Strictly follow these language requirements:
+1. Use the same language as the user's prompt for the following fields: "description", "task_description", "title", "slides", and any comments within "initial_code".
+2. Use English for all other fields, technical identifiers, and metadata to ensure system compatibility.
+3. In "initial_code", provide the actual source code in the target programming language, but ensure all explanatory comments are in the user's language.
+4. Use markdown for the slides to make them easy to read.`,
+			},
 			{Role: anyllm.RoleUser, Content: prompt},
 		},
+		Tools: []anyllm.Tool{
+			{
+				Type: "function",
+				Function: anyllm.Function{
+					Name: "generate_course_data",
+					Parameters: map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"course_id":   map[string]any{"type": "string"},
+							"title":       map[string]any{"type": "string"},
+							"description": map[string]any{"type": "string"},
+							"language":    map[string]any{"type": "string", "description": "The extension of the created code file(e.g., go, py, js)"},
+							"lessons": map[string]any{
+								"type": "array",
+								"items": map[string]any{
+									"type": "object",
+									"properties": map[string]any{
+										"lesson_id":        map[string]any{"type": "string"},
+										"title":            map[string]any{"type": "string"},
+										"slides":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+										"task_description": map[string]any{"type": "string"},
+										"initial_code":     map[string]any{"type": "string", "description": "The boilerplate code for the student to start with."},
+										"file_name":        map[string]any{"type": "string", "description": "The name of code file (e.g., main.go, index.html)"},
+									},
+									"required": []string{"lesson_id", "title", "slides", "task_description", "initial_code"},
+								},
+							},
+						},
+						"required": []string{"course_id", "title", "description", "language", "lessons"},
+					},
+				},
+			},
+		},
+		ToolChoice: "required",
 	})
 
+	response := ""
 	for chunk := range chunks {
 		if len(chunk.Choices) > 0 {
-			fmt.Print(chunk.Choices[0].Delta.Content)
+			if len(chunk.Choices[0].Delta.ToolCalls) > 0 {
+				argChunk := chunk.Choices[0].Delta.ToolCalls[0].Function.Arguments
+				response += argChunk
+
+				runes := []rune(response)
+				length := len(runes)
+
+				display := ""
+
+				if length > 15 {
+					display = string(runes[length-15:])
+				} else {
+					display = response
+				}
+
+				select {
+				case ch <- display:
+				default:
+				}
+			}
 		}
 	}
+
 	if err := <-errs; err != nil {
-		fmt.Printf("Error during streaming: %v\n", err)
-		return
+		fmt.Printf("Error: %v\n", err)
+		return ""
 	}
+
+	return saveCourse(response)
+
+}
+
+func saveCourse(responce string) string {
+
+	var course Course
+	err := json.Unmarshal([]byte(responce), &course)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return ""
+	}
+
+	home, _ := os.UserHomeDir()
+	base := filepath.Join(home, ".progoat")
+	coursePath := filepath.Join(base, "courses", course.ID)
+	os.MkdirAll(coursePath, 0755)
+
+	for _, lesson := range course.Lessons {
+		lessonPath := filepath.Join(coursePath, lesson.ID)
+		os.MkdirAll(lessonPath, 0755)
+
+		var slidesContent string
+		for _, s := range lesson.Slides {
+			//Create Index
+			slidesContent += s
+		}
+
+		os.WriteFile(filepath.Join(lessonPath, "slide.md"), []byte(slidesContent), 0644)
+		os.WriteFile(filepath.Join(lessonPath, "task.md"), []byte(lesson.TaskDescription), 0644)
+
+		ext := course.Language
+		os.WriteFile(filepath.Join(lessonPath, "main."+ext), []byte(lesson.InitialCode), 0644)
+
+	}
+	return course.Title
 
 }
 
