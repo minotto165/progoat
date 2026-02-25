@@ -63,6 +63,8 @@ AI will create lessons, including slides and coding exercises.`,
 
 		titleChan := make(chan string)
 
+		courseTitle := ""
+
 		s := spinner.New().
 			Title("Waiting for LLM...")
 		s.Action(func() {
@@ -72,7 +74,7 @@ AI will create lessons, including slides and coding exercises.`,
 				}
 			}()
 
-			generation(prompt, titleChan)
+			courseTitle = generation(prompt, titleChan)
 
 			close(titleChan)
 		})
@@ -81,11 +83,13 @@ AI will create lessons, including slides and coding exercises.`,
 		if err != nil {
 			fmt.Println("Error:", err)
 		}
-		fmt.Println("Course generated!")
+		if courseTitle != "" {
+			fmt.Println("Course generated:", courseTitle)
+		}
 	},
 }
 
-func generation(prompt string, ch chan string) {
+func generation(prompt string, ch chan string) string {
 	activeProvider := viper.GetString("active_provider")
 	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
 	activeApiKey := viper.GetString(fmt.Sprintf("providers.%s.api_key", activeProvider))
@@ -103,12 +107,12 @@ func generation(prompt string, ch chan string) {
 	default:
 		fmt.Printf("Error: Provider '%s' is not supported or not configured.\n", activeProvider)
 		fmt.Println("Please run 'progoat config' first.")
-		return
+		return ""
 	}
 
 	if err != nil {
 		fmt.Println("Error initializing model:", err)
-		return
+		return ""
 	}
 	ctx := context.Background()
 	chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
@@ -189,19 +193,20 @@ Strictly follow these language requirements:
 
 	if err := <-errs; err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return ""
 	}
 
-	saveCourse(response)
+	return saveCourse(response)
 
 }
 
-func saveCourse(responce string) {
+func saveCourse(responce string) string {
 
 	var course Course
 	err := json.Unmarshal([]byte(responce), &course)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
+		return ""
 	}
 
 	home, _ := os.UserHomeDir()
@@ -226,6 +231,7 @@ func saveCourse(responce string) {
 		os.WriteFile(filepath.Join(lessonPath, "main."+ext), []byte(lesson.InitialCode), 0644)
 
 	}
+	return course.Title
 
 }
 
