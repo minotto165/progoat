@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,9 +29,11 @@ func Execute() {
 }
 
 func init() {
-	viper.SetConfigFile(".progoat")
-	viper.SetConfigType("yaml")
 	home, _ := os.UserHomeDir()
-	viper.AddConfigPath(home)
+	base := filepath.Join(home, ".progoat")
+	os.MkdirAll(base, 0755)
+	configPath := filepath.Join(base, "config.yaml")
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(configPath)
 	viper.ReadInConfig()
 }
