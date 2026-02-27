@@ -4,8 +4,6 @@ Copyright © 2026 minotto
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -15,8 +13,9 @@ var listCmd = &cobra.Command{
 	Short: "List all generated courses",
 	Long:  `Display all learning courses available on your computer.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+
 	},
+	//
 }
 
 func init() {
