@@ -171,31 +171,20 @@ func saveCourse(response string) string {
 		return ""
 	}
 
+	// Crate course directory
+	coursePath := filepath.Join(coursesDir, course.ID)
+	os.MkdirAll(coursePath, 0755)
+
 	// Update courses.json
-	reducedCourse := course
-	reducedCourse.Lessons = []Lesson{}
-
-	coursesJson, _ := os.ReadFile(coursesJsonPath)
-	var courses []Course
-	err = json.Unmarshal([]byte(coursesJson), &courses)
-	if err != nil {
-		fmt.Println("Error parsing JSON:", err)
-		return ""
-	}
-	courses = append(courses, reducedCourse)
-
-	coursesJson, err = json.Marshal(courses)
+	coursesJsonPath := filepath.Join(coursePath, "course.json")
+	coursesJson, err := json.Marshal(course) // Convert to string(JSON)
 	if err != nil {
 		fmt.Println("Error marshaling JSON:", err)
 		return ""
 	}
-	coursesJson = []byte(coursesJson)
+	coursesJson = []byte(coursesJson) // Convert to []byte
 
 	os.WriteFile(coursesJsonPath, coursesJson, 0755)
-
-	// Crate course directory
-	coursePath := filepath.Join(coursesDir, course.ID)
-	os.MkdirAll(coursePath, 0755)
 
 	// Create lessons direcotries
 	for _, lesson := range course.Lessons {
