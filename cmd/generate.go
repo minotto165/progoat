@@ -23,23 +23,6 @@ import (
 	"github.com/mozilla-ai/any-llm-go/providers/zai"
 )
 
-type Course struct {
-	ID          string   `json:"course_id"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Language    string   `json:"language"`
-	Lessons     []Lesson `json:"lessons"`
-}
-
-type Lesson struct {
-	ID              string   `json:"lesson_id"`
-	Title           string   `json:"title"`
-	Slides          []string `json:"slides"`
-	TaskDescription string   `json:"task_description"`
-	InitialCode     string   `json:"initial_code"`
-	FileName        string   `json:"file_name"`
-}
-
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate",
@@ -163,39 +146,18 @@ Strictly follow these language requirements:
 		ToolChoice: "required",
 	})
 
-	// Recieve
-	// response := ""
-	// for chunk := range chunks {
-	// 	if len(chunk.Choices) > 0 {
-	// 		if len(chunk.Choices[0].Delta.ToolCalls) > 0 {
-	// 			argChunk := chunk.Choices[0].Delta.ToolCalls[0].Function.Arguments
-	// 			response += argChunk
-
-	// 			runes := []rune(response)
-	// 			length := len(runes)
-
-	// 			display := ""
-
-	// 			if length > 15 {
-	// 				display = string(runes[length-15:])
-	// 			} else {
-	// 				display = response
-	// 			}
-
-	// 			select {
-	// 			case ch <- display:
-	// 			default:
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return ""
 	}
 
-	return saveCourse(response.Choices[0].Message.ToolCalls[0].Function.Arguments)
+	if len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
+
+		return saveCourse(response.Choices[0].Message.ToolCalls[0].Function.Arguments)
+	} else {
+		fmt.Println("Error: LLM returned an invalid JSON.")
+		return ""
+	}
 
 }
 
@@ -215,11 +177,18 @@ func saveCourse(response string) string {
 
 	coursesJson, _ := os.ReadFile(coursesJsonPath)
 	var courses []Course
-	json.Unmarshal([]byte(coursesJson), &courses)
-
+	err = json.Unmarshal([]byte(coursesJson), &courses)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return ""
+	}
 	courses = append(courses, reducedCourse)
 
-	coursesJson, _ = json.Marshal(courses)
+	coursesJson, err = json.Marshal(courses)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return ""
+	}
 	coursesJson = []byte(coursesJson)
 
 	os.WriteFile(coursesJsonPath, coursesJson, 0755)
