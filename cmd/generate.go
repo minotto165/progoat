@@ -29,7 +29,7 @@ var generateCmd = &cobra.Command{
 	Short: "Create a new course using AI",
 	Long: `Generate a new learning course by providing a topic. 
 AI will create lessons, including slides and coding exercises.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var prompt string
 
