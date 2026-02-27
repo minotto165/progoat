@@ -30,6 +30,7 @@ Settings are saved locally on your machine.`,
 						huh.NewOption("Gemini", "gemini"),
 						huh.NewOption("OpenAI", "openai"),
 						huh.NewOption("Anthropic", "anthropic"),
+						huh.NewOption("Z.AI", "zai"),
 					).
 					Value(&provider),
 			),
@@ -51,8 +52,8 @@ Settings are saved locally on your machine.`,
 		case "gemini":
 			keyTitle = "Gemini API Key"
 			options = []huh.Option[string]{
-				huh.NewOption("Gemini 3 Pro Preview", "gemini-3-pro-preview"),
-				huh.NewOption("Gemini 3 Flash Preview", "gemini-3-flash-preview"),
+				huh.NewOption("Gemini 3.1 Pro Preview", "gemini-3.1-pro-preview"),
+				huh.NewOption("Gemini 3.1 Flash Preview", "gemini-3.1-flash-preview"),
 				huh.NewOption("Gemini Flash Latest", "gemini-flash-latest"),
 				huh.NewOption("Gemini Flash Lite Latest", "gemini-flash-lite-latest"),
 				huh.NewOption("Gemini 2.5 Pro", "gemini-2.5-pro"),
@@ -72,12 +73,20 @@ Settings are saved locally on your machine.`,
 				huh.NewOption("Claude Sonnet 4.5", "claude-sonnet-4-5"),
 				huh.NewOption("Claude Haiku 4.5", "claude-haiku-4-5"),
 			}
+		case "zai":
+			keyTitle = "Z.AI API Key"
+			options = []huh.Option[string]{
+				huh.NewOption("GLM-5", "glm-5"),
+				huh.NewOption("GLM-4.7", "glm-4.7"),
+				huh.NewOption("GLM-4.7-FlashX", "glm-4.7-flashx"),
+				huh.NewOption("GLM-4.7-Flash", "glm-4.7-flash"),
+			}
 		}
 
 		form = huh.NewForm(
 			huh.NewGroup(
 				huh.NewInput().
-					Title(keyTitle).
+					Title(keyTitle+" (Empty: No change)").
 					EchoMode(huh.EchoModePassword).
 					Value(&apiKey),
 
@@ -102,7 +111,9 @@ Settings are saved locally on your machine.`,
 
 		if confirm {
 			viper.Set("active_provider", provider)
-			viper.Set(fmt.Sprintf("providers.%s.api_key", provider), apiKey)
+			if apiKey != "" {
+				viper.Set(fmt.Sprintf("providers.%s.api_key", provider), apiKey)
+			}
 			viper.Set(fmt.Sprintf("providers.%s.model", provider), model)
 			err = viper.WriteConfig()
 			if err != nil {
