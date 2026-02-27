@@ -28,12 +28,27 @@ func Execute() {
 	}
 }
 
+var homeDir, _ = os.UserHomeDir()
+var baseDir = filepath.Join(homeDir, ".progoat")
+var coursesDir = filepath.Join(baseDir, "courses")
+var configPath = filepath.Join(baseDir, "config.yaml")
+var coursesJsonPath = filepath.Join(coursesDir, "courses.json")
+
 func init() {
-	home, _ := os.UserHomeDir()
-	base := filepath.Join(home, ".progoat")
-	os.MkdirAll(base, 0755)
-	configPath := filepath.Join(base, "config.yaml")
+	os.MkdirAll(baseDir, 0755)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(configPath)
 	viper.ReadInConfig()
+
+	os.MkdirAll(coursesDir, 0755)
+
+	if !exists(coursesJsonPath) {
+		os.Create(coursesJsonPath)
+	}
+
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
