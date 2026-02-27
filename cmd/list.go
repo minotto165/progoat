@@ -4,6 +4,10 @@ Copyright © 2026 minotto
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -14,6 +18,27 @@ var listCmd = &cobra.Command{
 	Long:  `Display all learning courses available on your computer.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		coursesJson, _ := os.ReadFile(coursesJsonPath)
+		var courses []Course
+		err := json.Unmarshal([]byte(coursesJson), &courses)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+		}
+
+		maxLength := 30
+		fmt.Printf("%-30s %s\n", "COURSE ID", "TITLE")
+		fmt.Println("------------------------------------------")
+
+		for _, course := range courses {
+			id := course.ID
+			title := course.Title
+			if len(id) > maxLength {
+				id = string([]rune(id)[:maxLength-3])
+				id += "..."
+			}
+
+			fmt.Printf("%-30s %s\n", id, title)
+		}
 	},
 	//
 }
