@@ -25,25 +25,34 @@ import (
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
-	Use:   "generate",
+	Use:   "generate [topic]",
 	Short: "Create a new course using AI",
 	Long: `Generate a new learning course by providing a topic. 
 AI will create lessons, including slides and coding exercises.`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		length, _ := cmd.Flags().GetString("length")
+
 		var prompt string
-		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewText().
-					Title("Prompt").
-					Description("Enter what you want to learn...").
-					Value(&prompt),
-			),
-		).WithTheme(huh.ThemeBase())
-		err := form.Run()
-		if err != nil {
-			fmt.Println("Canceled.")
-			return
+
+		if len(args) > 0 {
+			prompt = args[0]
+		} else {
+			form := huh.NewForm(
+				huh.NewGroup(
+					huh.NewText().
+						Title("Prompt").
+						Description("Enter what you want to learn...").
+						Value(&prompt),
+				),
+			).WithTheme(huh.ThemeBase())
+			err := form.Run()
+			if err != nil {
+				fmt.Println("Canceled.")
+				return
+			}
 		}
+
 		fmt.Println("Input >", prompt)
 
 		courseTitle := ""
@@ -52,7 +61,7 @@ AI will create lessons, including slides and coding exercises.`,
 		s.Suffix = " Generating..."
 		s.Start()
 
-		courseTitle = generation(prompt) // chanが閉じるまで待つ
+		courseTitle = generation(prompt, length) // chanが閉じるまで待つ
 
 		s.Stop()
 
@@ -62,7 +71,7 @@ AI will create lessons, including slides and coding exercises.`,
 	},
 }
 
-func generation(prompt string) string {
+func generation(prompt, length string) string {
 
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
@@ -106,9 +115,11 @@ Strictly follow these language requirements:
 2. Use English for all other fields, technical identifiers, and metadata to ensure system compatibility.
 3. In "initial_code", provide the actual source code in the target programming language, but ensure all explanatory comments are in the user's language.
 4. Use markdown for the slides to make them easy to read.
-5. Course ID should be short and simple.`,
+5. Course ID should be short and super simple.
+6. Course Title should be simple.`,
 			},
 			{Role: anyllm.RoleUser, Content: prompt},
+			{Role: anyllm.RoleUser, Content: "Course length(short,medium,long):" + length},
 		},
 		Tools: []anyllm.Tool{
 			{
@@ -220,5 +231,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// generateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	generateCmd.Flags().StringP("length", "l", "medium", "Course length (short, medium, long)")
 }
