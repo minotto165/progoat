@@ -31,6 +31,8 @@ var generateCmd = &cobra.Command{
 AI will create lessons, including slides and coding exercises.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		length, _ := cmd.Flags().GetString("length")
+
 		var prompt string
 
 		if len(args) > 0 {
@@ -59,7 +61,7 @@ AI will create lessons, including slides and coding exercises.`,
 		s.Suffix = " Generating..."
 		s.Start()
 
-		courseTitle = generation(prompt) // chanが閉じるまで待つ
+		courseTitle = generation(prompt, length) // chanが閉じるまで待つ
 
 		s.Stop()
 
@@ -69,7 +71,7 @@ AI will create lessons, including slides and coding exercises.`,
 	},
 }
 
-func generation(prompt string) string {
+func generation(prompt, length string) string {
 
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
@@ -218,8 +220,6 @@ func saveCourse(response string) string {
 
 }
 
-var length string
-
 func init() {
 	rootCmd.AddCommand(generateCmd)
 
@@ -231,5 +231,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	generateCmd.Flags().StringVarP(&length, "length", "l", "medium", "Course length (short, medium, long)")
+	generateCmd.Flags().StringP("length", "l", "medium", "Course length (short, medium, long)")
 }
