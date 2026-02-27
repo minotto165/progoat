@@ -32,7 +32,6 @@ var homeDir, _ = os.UserHomeDir()
 var baseDir = filepath.Join(homeDir, ".progoat")
 var coursesDir = filepath.Join(baseDir, "courses")
 var configPath = filepath.Join(baseDir, "config.yaml")
-var coursesJsonPath = filepath.Join(coursesDir, "courses.json")
 
 func init() {
 	os.MkdirAll(baseDir, 0755)
@@ -42,13 +41,9 @@ func init() {
 
 	os.MkdirAll(coursesDir, 0755)
 
-	if !exists(coursesJsonPath) {
-		os.Create(coursesJsonPath)
-	}
-
 }
 
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
+// func exists(path string) bool {
+// 	_, err := os.Stat(path)
+// 	return !os.IsNotExist(err)
+// }

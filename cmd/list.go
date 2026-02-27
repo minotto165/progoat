@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -18,16 +19,38 @@ var listCmd = &cobra.Command{
 	Long:  `Display all learning courses available on your computer.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		coursesJson, _ := os.ReadFile(coursesJsonPath)
-		var courses []Course
-		err := json.Unmarshal([]byte(coursesJson), &courses)
+		files, err := os.ReadDir(coursesDir)
 		if err != nil {
-			fmt.Println("Error parsing JSON:", err)
+			fmt.Println("Error:", err)
+			return
+		}
+
+		var courses []Course
+		for _, file := range files {
+			if file.IsDir() {
+				dirName := file.Name()
+				coursesJsonPath := filepath.Join(coursesDir, dirName, "course.json")
+				coursesJson, err := os.ReadFile(coursesJsonPath)
+				if err != nil {
+					fmt.Println("Error:", err)
+					return
+				}
+				// Convert to struct
+				var course Course
+				err = json.Unmarshal([]byte(coursesJson), &course)
+				if err != nil {
+					fmt.Println("Error parsing JSON:", err)
+					return
+				}
+
+				// Add to slice
+				courses = append(courses, course)
+			}
 		}
 
 		maxLength := 30
 		fmt.Printf("%-30s %s\n", "COURSE ID", "TITLE")
-		fmt.Println("------------------------------------------")
+		fmt.Println("----------------------------------------------------")
 
 		for _, course := range courses {
 			id := course.ID
