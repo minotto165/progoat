@@ -4,9 +4,16 @@ go 1.25.6
 
 require (
 	github.com/charmbracelet/huh v0.8.0
-	github.com/mozilla-ai/any-llm-go v0.8.0
+	github.com/mozilla-ai/any-llm-go v0.8.1-0.20260218144737-abb77304fc3b
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+)
+
+require (
+	github.com/briandowns/spinner v1.23.2 // direct
+	github.com/fatih/color v1.7.0 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	golang.org/x/term v0.37.0 // indirect
 )
 
 require (
@@ -20,7 +27,6 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0 // indirect
 	github.com/charmbracelet/bubbletea v1.3.10 // indirect
 	github.com/charmbracelet/colorprofile v0.4.1 // indirect
-	github.com/charmbracelet/huh/spinner v0.0.0-20260223110133-9dc45e34a40b // direct
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
