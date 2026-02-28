@@ -203,13 +203,15 @@ func saveCourse(response string) string {
 		os.MkdirAll(lessonPath, 0755)
 
 		// Create slides
-		var slidesContent string
-		for _, s := range lesson.Slides {
-			slidesContent += s
+		slides := lesson.Slides
+		slidesContent, err := json.Marshal(slides)
+		if err != nil {
+			fmt.Println("Error marshaling JSON:", err)
+			return ""
 		}
 
 		// Write Files
-		os.WriteFile(filepath.Join(lessonPath, "slide.md"), []byte(slidesContent), 0644)
+		os.WriteFile(filepath.Join(lessonPath, "slide.md"), slidesContent, 0644)
 		os.WriteFile(filepath.Join(lessonPath, "task.md"), []byte(lesson.TaskDescription), 0644)
 
 		ext := course.Language
