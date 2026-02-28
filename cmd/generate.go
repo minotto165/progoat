@@ -138,9 +138,16 @@ Strictly follow these language requirements:
 								"items": map[string]any{
 									"type": "object",
 									"properties": map[string]any{
-										"lesson_id":        map[string]any{"type": "string"},
-										"title":            map[string]any{"type": "string"},
-										"slides":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "slide MD text by **PAGE** (e.g., ['# Slide 1: Introduction<br>## The purpose of this course<br>In this lesson,...','# Slide(ja:スライド) 2: Function<br>## `hello_world` function<br>Learn how to...','# Slide 2: Execution<br>## Program execution<br>Let's see how the `if __name__ == “__main__”:`...'])"},
+										"lesson_id": map[string]any{"type": "string"},
+										"title":     map[string]any{"type": "string"},
+										"slides": map[string]any{
+											"type":  "array",
+											"items": map[string]any{"type": "string"},
+											"description": "An array of markdown strings, where each element is a single slide page. " +
+												"Follow these rules: " +
+												"1. Use '##' for headers to define the start of a new slide content. " +
+												"2. For language requirements, put the English term first, followed by the Japanese translation in parentheses, like 'Function (ja:スライド)'. " +
+												"3. Do not include page numbers in the markdown string itself."},
 										"task_description": map[string]any{"type": "string"},
 										"initial_code":     map[string]any{"type": "string", "description": "The boilerplate code for the student to start with."},
 										"file_name":        map[string]any{"type": "string", "description": "The name of code file (e.g., main.go, index.html)"},
@@ -211,7 +218,7 @@ func saveCourse(response string) string {
 		}
 
 		// Write Files
-		os.WriteFile(filepath.Join(lessonPath, "slide.md"), slidesContent, 0644)
+		os.WriteFile(filepath.Join(lessonPath, "slide.json"), slidesContent, 0644)
 		os.WriteFile(filepath.Join(lessonPath, "task.md"), []byte(lesson.TaskDescription), 0644)
 
 		ext := course.Language
