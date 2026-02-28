@@ -61,7 +61,7 @@ AI will create lessons, including slides and coding exercises.`,
 		s.Suffix = " Generating..."
 		s.Start()
 
-		courseTitle = generation(prompt, length) // chanが閉じるまで待つ
+		courseTitle = generation(prompt, length)
 
 		s.Stop()
 
@@ -129,10 +129,10 @@ Strictly follow these language requirements:
 					Parameters: map[string]any{
 						"type": "object",
 						"properties": map[string]any{
-							"course_id":   map[string]any{"type": "string"},
-							"title":       map[string]any{"type": "string"},
-							"description": map[string]any{"type": "string"},
-							"language":    map[string]any{"type": "string", "description": "The extension of the created code file(e.g., go, py, js),NOT NATURAL LANGUAGE(ja,en...)"},
+							"course_id":            map[string]any{"type": "string"},
+							"title":                map[string]any{"type": "string"},
+							"description":          map[string]any{"type": "string"},
+							"programming_language": map[string]any{"type": "string", "description": "The extension of the created code file(e.g., go, py, js),NOT NATURAL LANGUAGE(ja,en...)"},
 							"lessons": map[string]any{
 								"type": "array",
 								"items": map[string]any{
@@ -150,13 +150,14 @@ Strictly follow these language requirements:
 												"3. Do not include page numbers in the markdown string itself."},
 										"task_description": map[string]any{"type": "string"},
 										"initial_code":     map[string]any{"type": "string", "description": "The boilerplate code for the student to start with."},
+										"correct_output":   map[string]any{"type": "string", "description": "The expected standard output (stdout) when the task is correctly implemented."},
 										"file_name":        map[string]any{"type": "string", "description": "The name of code file (e.g., main.go, index.html)"},
 									},
-									"required": []string{"lesson_id", "title", "slides", "task_description", "initial_code"},
+									"required": []string{"lesson_id", "title", "slides", "task_description", "initial_code", "correct_output"},
 								},
 							},
 						},
-						"required": []string{"course_id", "title", "description", "language", "lessons"},
+						"required": []string{"course_id", "title", "description", "programming_language", "lessons"},
 					},
 				},
 			},
@@ -220,9 +221,7 @@ func saveCourse(response string) string {
 		// Write Files
 		os.WriteFile(filepath.Join(lessonPath, "slide.json"), slidesContent, 0644)
 		os.WriteFile(filepath.Join(lessonPath, "task.md"), []byte(lesson.TaskDescription), 0644)
-
-		ext := course.Language
-		os.WriteFile(filepath.Join(lessonPath, "main."+ext), []byte(lesson.InitialCode), 0644)
+		os.WriteFile(filepath.Join(lessonPath, lesson.FileName), []byte(lesson.InitialCode), 0644)
 
 	}
 	return course.Title
