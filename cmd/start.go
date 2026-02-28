@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/spf13/cobra"
@@ -32,20 +34,58 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 
 		fmt.Println("[INFO] Course Directory:", coursePath)
 
-		for _, c := range course.Lessons {
-			slides := c.Slides
-			for _, s := range slides {
+		for _, l := range course.Lessons {
+
+			slides := l.Slides
+			for i, s := range slides {
+				clearScreen()
 				out, err := glamour.Render(s, "dark")
 				if err != nil {
 					fmt.Println("Error:", err)
 					return
 				}
-				fmt.Println(out)
-				fmt.Println("----------------------")
+				title := fmt.Sprint(course.Title, ": page ", i+1)
+				fmt.Println(title)
+				fmt.Print(out)
+
+				fmt.Print("Press Enter to next page...")
+				fmt.Scanln()
 			}
+
+			clearScreen()
+
+			task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
+				"## Task:",
+				l.TaskDescription,
+				filepath.Clean(filepath.Join(coursePath, l.FileName)),
+			)
+			out, err := glamour.Render(task, "dark")
+			if err != nil {
+				return
+			}
+
+			title := fmt.Sprint(course.Title, ": task")
+			fmt.Println(title)
+
+			fmt.Print(out)
+
+			fmt.Print("Edit and save the file, then hit Enter.")
+			fmt.Scanln()
+
 		}
 
 	},
+}
+
+func clearScreen() {
+	switch runtime.GOOS {
+	case "windows":
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	default:
+		fmt.Print("\033[H\033[2J") // Unix系のクリアコマンド
+	}
 }
 
 func getCourses() ([]Course, error) {
@@ -111,4 +151,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
 }

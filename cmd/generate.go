@@ -132,7 +132,7 @@ Strictly follow these language requirements:
 							"course_id":   map[string]any{"type": "string"},
 							"title":       map[string]any{"type": "string"},
 							"description": map[string]any{"type": "string"},
-							"language":    map[string]any{"type": "string", "description": "The extension of the created code file(e.g., go, py, js)"},
+							"language":    map[string]any{"type": "string", "description": "The extension of the created code file(e.g., go, py, js),NOT NATURAL LANGUAGE(ja,en...)"},
 							"lessons": map[string]any{
 								"type": "array",
 								"items": map[string]any{
