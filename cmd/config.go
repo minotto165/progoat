@@ -53,7 +53,7 @@ Settings are saved locally on your machine.`,
 			keyTitle = "Gemini API Key"
 			options = []huh.Option[string]{
 				huh.NewOption("Gemini 3.1 Pro Preview", "gemini-3.1-pro-preview"),
-				huh.NewOption("Gemini 3.1 Flash Preview", "gemini-3.1-flash-preview"),
+				huh.NewOption("Gemini 3 Flash Preview", "gemini-3-flash-preview"),
 				huh.NewOption("Gemini Flash Latest", "gemini-flash-latest"),
 				huh.NewOption("Gemini Flash Lite Latest", "gemini-flash-lite-latest"),
 				huh.NewOption("Gemini 2.5 Pro", "gemini-2.5-pro"),
