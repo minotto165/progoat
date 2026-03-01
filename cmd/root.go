@@ -28,18 +28,18 @@ func Execute() {
 	}
 }
 
-var homeDir, _ = os.UserHomeDir()
-var baseDir = filepath.Join(homeDir, ".progoat")
-var coursesDir = filepath.Join(baseDir, "courses")
-var configPath = filepath.Join(baseDir, "config.yaml")
+var homePath, _ = os.UserHomeDir()
+var basePath = filepath.Join(homePath, ".progoat")
+var coursesPath = filepath.Join(basePath, "courses")
+var configPath = filepath.Join(basePath, "config.yaml")
 
 func init() {
-	os.MkdirAll(baseDir, 0755)
+	os.MkdirAll(basePath, 0755)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(configPath)
 	viper.ReadInConfig()
 
-	os.MkdirAll(coursesDir, 0755)
+	os.MkdirAll(coursesPath, 0755)
 
 }
 

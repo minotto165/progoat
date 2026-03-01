@@ -51,6 +51,7 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 			courses, err := getCourses()
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
 
 			options := []huh.Option[string]{}
@@ -72,6 +73,7 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 			err = form.Run()
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
 		}
 
@@ -87,7 +89,7 @@ func startCourse(courseID string) {
 		fmt.Println("Error:", err)
 		return
 	}
-	coursePath := filepath.Join(coursesDir, course.ID)
+	coursePath := filepath.Join(coursesPath, course.ID)
 
 	fmt.Println("[INFO] Course Directory:", coursePath)
 
@@ -217,20 +219,23 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 
 	code_s := string(code)
 
-	response, err := generate_judgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
+	response, err := generateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
 	if err != nil {
 		return judgeResult, err
 	}
 
 	s.Stop()
 
-	json.Unmarshal([]byte(response), &judgeResult)
+	err = json.Unmarshal([]byte(response), &judgeResult)
+	if err != nil {
+		return judgeResult, err
+	}
 
 	return judgeResult, nil
 
 }
 
-func generate_judgement(task, code, out, modelOut string) (string, error) {
+func generateJudgement(task, code, out, modelOut string) (string, error) {
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
 	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
@@ -294,7 +299,7 @@ func generate_judgement(task, code, out, modelOut string) (string, error) {
 		return "", err
 	}
 
-	if len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
+	if len(response.Choices) > 0 && len(response.Choices[0].Message.ToolCalls) > 0 && len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
 		return response.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
 	} else {
 		return "", fmt.Errorf("LLM returned an invalid JSON.")
@@ -303,14 +308,14 @@ func generate_judgement(task, code, out, modelOut string) (string, error) {
 
 func run(language, filePath string) (string, error) {
 	cmd := exec.Command("")
-	executable := 1
+	executable := true
 	switch language {
 	case "go":
 		cmd = exec.Command("go", "run", filePath)
 	case "py":
 		cmd = exec.Command("python", filePath)
 	default:
-		executable = 0
+		executable = false
 		switch language {
 		case "html":
 			browser.OpenFile(filePath)
@@ -318,7 +323,7 @@ func run(language, filePath string) (string, error) {
 	}
 
 	output_s := ""
-	if executable == 1 {
+	if executable {
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return "", err
@@ -343,7 +348,7 @@ func clearScreen() {
 }
 
 func getCourses() ([]Course, error) {
-	files, err := os.ReadDir(coursesDir)
+	files, err := os.ReadDir(coursesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -351,14 +356,14 @@ func getCourses() ([]Course, error) {
 	for _, file := range files {
 		if file.IsDir() {
 			dirName := file.Name()
-			coursesJsonPath := filepath.Join(coursesDir, dirName, "course.json")
+			coursesJsonPath := filepath.Join(coursesPath, dirName, "course.json")
 			coursesJson, err := os.ReadFile(coursesJsonPath)
 			if err != nil {
 				return nil, err
 			}
 			// Convert to struct
 			var course Course
-			err = json.Unmarshal([]byte(coursesJson), &course)
+			err = json.Unmarshal(coursesJson, &course)
 			if err != nil {
 				return nil, fmt.Errorf("Error parsing JSON: %s", err)
 			}
@@ -373,7 +378,7 @@ func getCourses() ([]Course, error) {
 func getCourseStruct(courseID string) (Course, error) {
 	courses, err := getCourses()
 	course := Course{}
-	found := 0
+	found := false
 	if err != nil {
 		return course, err
 	}
@@ -382,11 +387,11 @@ func getCourseStruct(courseID string) (Course, error) {
 		ID := c.ID
 		if ID == courseID {
 			course = c
-			found = 1
+			found = true
 			break
 		}
 	}
-	if found == 0 {
+	if found {
 		return course, fmt.Errorf("No such a course: %s", courseID)
 	}
 

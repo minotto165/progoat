@@ -32,6 +32,13 @@ AI will create lessons, including slides and coding exercises.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		length, _ := cmd.Flags().GetString("length")
+		switch length {
+		case "short", "medium", "long":
+			break
+		default:
+			fmt.Println("Invalid length. Options: short, medium, long.")
+			return
+		}
 
 		var prompt string
 
@@ -61,7 +68,11 @@ AI will create lessons, including slides and coding exercises.`,
 		s.Suffix = " Generating..."
 		s.Start()
 
-		courseTitle = generate_course(prompt, length)
+		courseTitle, err := generateCourse(prompt, length)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
 		s.Stop()
 
@@ -71,7 +82,7 @@ AI will create lessons, including slides and coding exercises.`,
 	},
 }
 
-func generate_course(prompt, length string) string {
+func generateCourse(prompt, length string) (string, error) {
 
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
@@ -92,14 +103,11 @@ func generate_course(prompt, length string) string {
 	case "zai":
 		provider, err = zai.New(anyllm.WithAPIKey(activeApiKey))
 	default:
-		fmt.Printf("Error: Provider '%s' is not supported or not configured.\n", activeProvider)
-		fmt.Println("Please run 'progoat config' first.")
-		return ""
+		return "", fmt.Errorf("Provider '%s' is not supported or not configured. Please run 'progoat config' first.\n", activeProvider)
 	}
 
 	if err != nil {
-		fmt.Println("Error initializing model:", err)
-		return ""
+		return "", fmt.Errorf("Error during initializing model:%s", err)
 	}
 
 	// Generate!
@@ -119,8 +127,14 @@ Strictly follow these language requirements:
 6. Course Title should be simple.
 7. The first slide of the first lesson MUST be a "Setup Guide". It should explain how to install the necessary environment for the language and how to run the code on a local machine.`,
 			},
-			{Role: anyllm.RoleUser, Content: prompt},
-			{Role: anyllm.RoleUser, Content: "Course length(short,medium,long):" + length},
+			{
+				Role:    anyllm.RoleUser,
+				Content: fmt.Sprintf("Topic: \"\"\"\n%s\n\"\"\"", prompt),
+			},
+			{
+				Role:    anyllm.RoleUser,
+				Content: fmt.Sprintf("Course length: %s", length),
+			},
 		},
 		Tools: []anyllm.Tool{
 			{
@@ -147,7 +161,7 @@ Strictly follow these language requirements:
 											"description": "An array of markdown strings, where each element is a single slide page. " +
 												"Follow these rules: " +
 												"1. Use '##' for headers to define the start of a new slide content. " +
-												"1. Write naturally in the student's language (the language used in the prompt). " +
+												"2. Write naturally in the student's language (the language used in the prompt). " +
 												"3. Do not include page numbers in the markdown string itself." +
 												"4. The VERY FIRST slide of the FIRST lesson must be a 'Local Setup Guide' for the programming language (e.g., installation, run commands)."},
 										"task_description": map[string]any{"type": "string"},
@@ -168,40 +182,36 @@ Strictly follow these language requirements:
 	})
 
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return ""
+		return "", err
 	}
 
-	if len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
+	if len(response.Choices) > 0 && len(response.Choices[0].Message.ToolCalls) > 0 && len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
 
 		return saveCourse(response.Choices[0].Message.ToolCalls[0].Function.Arguments)
 	} else {
-		fmt.Println("Error: LLM returned an invalid JSON.")
-		return ""
+		return "", fmt.Errorf("LLM returned an invalid JSON.")
 	}
 
 }
 
-func saveCourse(response string) string {
+func saveCourse(response string) (string, error) {
 
 	// JSON to struct
 	var course Course
 	err := json.Unmarshal([]byte(response), &course)
 	if err != nil {
-		fmt.Println("Error parsing JSON:", err)
-		return ""
+		return "", fmt.Errorf("Error parsing JSON:%s", err)
 	}
 
 	// Crate course directory
-	coursePath := filepath.Join(coursesDir, course.ID)
+	coursePath := filepath.Join(coursesPath, course.ID)
 	os.MkdirAll(coursePath, 0755)
 
 	// Update courses.json
 	coursesJsonPath := filepath.Join(coursePath, "course.json")
 	coursesJson, err := json.Marshal(course) // Convert to string(JSON)
 	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
-		return ""
+		return "", fmt.Errorf("Error marshaling JSON:%s", err)
 	}
 	coursesJson = []byte(coursesJson) // Convert to []byte
 
@@ -216,17 +226,16 @@ func saveCourse(response string) string {
 		slides := lesson.Slides
 		slidesContent, err := json.Marshal(slides)
 		if err != nil {
-			fmt.Println("Error marshaling JSON:", err)
-			return ""
+			return "", fmt.Errorf("Error marshaling JSON:%s", err)
 		}
 
 		// Write Files
 		os.WriteFile(filepath.Join(lessonPath, "slide.json"), slidesContent, 0644)
 		os.WriteFile(filepath.Join(lessonPath, "task.md"), []byte(lesson.TaskDescription), 0644)
-		os.WriteFile(filepath.Join(lessonPath, lesson.FileName), []byte(lesson.InitialCode), 0644)
+		os.WriteFile(filepath.Join(lessonPath, filepath.Base(lesson.FileName)), []byte(lesson.InitialCode), 0644)
 
 	}
-	return course.Title
+	return course.Title, nil
 
 }
 

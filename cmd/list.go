@@ -19,7 +19,7 @@ var listCmd = &cobra.Command{
 	Long:  `Display all learning courses available on your computer.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		files, err := os.ReadDir(coursesDir)
+		files, err := os.ReadDir(coursesPath)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
@@ -29,7 +29,7 @@ var listCmd = &cobra.Command{
 		for _, file := range files {
 			if file.IsDir() {
 				dirName := file.Name()
-				coursesJsonPath := filepath.Join(coursesDir, dirName, "course.json")
+				coursesJsonPath := filepath.Join(coursesPath, dirName, "course.json")
 				coursesJson, err := os.ReadFile(coursesJsonPath)
 				if err != nil {
 					fmt.Println("Error:", err)
