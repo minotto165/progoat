@@ -24,8 +24,6 @@ Progoat is an LLM-powered CLI tool for programming education, inspired by Progat
 
 ## Getting Started
 
-
-
 ### Installation
 
 Make sure you have [Go](https://golang.org/dl/) installed.
@@ -62,6 +60,7 @@ or add prompt as an argument.
 ```bash
 progoat generate [Prompt] --length [short,medium,long]
 ```
+Example prompt: *"I want to learn the basics of Go concurrency with goroutines and channels."*
 
 ### 2. List Your Courses
 See all the courses you have generated.

@@ -11,7 +11,6 @@ Progoatは、Progateに影響を受けた、LLMを利用したプログラミン
 ## デモ
 ![Progoat Demo](./docs/demo.gif)
 
-
 ## 機能
 
 - **AIによる学習コース生成**: 学びたいことを入力するだけで、あらゆるトピックについて学習コース全体を作成できます。
@@ -57,6 +56,7 @@ progoat generate
 ```bash
 progoat generate [Prompt] --length [short,medium,long]
 ```
+プロンプトの例: *"goroutineとチャネルを使用した、Goの並行処理の基礎を学びたいです。"*
 
 ### 2. コースのリストを表示する
 生成したすべてのコースを表示します。

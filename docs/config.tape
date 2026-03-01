@@ -55,11 +55,13 @@
 #   Hide                            Hide the subsequent commands from the output
 #   Show                            Show the subsequent commands in the output
 
-Output demo.mp4
+Output config.gif
 
-Set FontSize 32
-Set Width 1800
-Set Height 1200
+Set FontSize 24
+Set Width 1200
+Set Height 200
+Set Framerate 15
+Set TypingSpeed 50ms
 
 
 Sleep 1s
