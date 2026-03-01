@@ -16,11 +16,13 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/charmbracelet/glamour"
 	"github.com/eiannone/keyboard"
+	tsize "github.com/kopoli/go-terminal-size"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	"github.com/mozilla-ai/any-llm-go/providers/anthropic"
 	"github.com/mozilla-ai/any-llm-go/providers/gemini"
 	"github.com/mozilla-ai/any-llm-go/providers/openai"
 	"github.com/mozilla-ai/any-llm-go/providers/zai"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -56,7 +58,7 @@ func startCourse(courseID string) {
 		slides := l.Slides
 		defer keyboard.Close()
 		for i, s := range slides {
-			out, err := glamour.Render(s, "dark")
+			out, err := renderWithTerminalWidth(s)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
@@ -78,8 +80,9 @@ func startCourse(courseID string) {
 			l.TaskDescription,
 			filePath,
 		)
-		out, err := glamour.Render(task, "dark")
+		out, err := renderWithTerminalWidth(task)
 		if err != nil {
+			fmt.Println("Error:", err)
 			return
 		}
 
@@ -216,18 +219,31 @@ func generate(task, code, out, modelOut string) (string, error) {
 
 func run(language, filePath string) (string, error) {
 	cmd := exec.Command("")
+	executable := 1
 	switch language {
 	case "go":
 		cmd = exec.Command("go", "run", filePath)
 	case "py":
 		cmd = exec.Command("python", filePath)
+	default:
+		executable = 0
+		switch language {
+		case "html":
+			browser.OpenFile(filePath)
+		}
 	}
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
+	output_s := ""
+	if executable == 1 {
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return "", err
+		}
+		output_s = string(output)
+	} else {
+		output_s = string(fmt.Sprint("no output with ", language))
 	}
-	output_s := string(output)
+
 	return output_s, nil
 }
 
@@ -291,6 +307,28 @@ func getCourseStruct(courseID string) (Course, error) {
 	}
 
 	return course, nil
+}
+
+func renderWithTerminalWidth(raw string) (string, error) {
+	s, err := tsize.GetSize()
+	width := 0
+	if err != nil {
+		width = 80
+		fmt.Println(err)
+	} else {
+		width = s.Width
+	}
+
+	r, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width-5),
+	)
+
+	out, err := r.Render(raw)
+	if err != nil {
+		return "", err
+	}
+	return out, nil
 }
 
 func init() {
