@@ -1,9 +1,9 @@
 # Progoat 🐐
 
+Progoat is an LLM-powered CLI tool for programming education, inspired by Progate. Generate structured programming courses on any topic, read slides, and solve coding exercises directly from your terminal.
+
 > [!TIP]
 > [日本語のREADMEはこちら](./README.ja.md)
-
-Progoat is an LLM-powered CLI tool for programming education, inspired by Progate. Generate structured programming courses on any topic, read slides, and solve coding exercises directly from your terminal.
 
 > [!WARNING]
 > Executes AI-generated code on your machine. Review before running. Use at your own risk.
