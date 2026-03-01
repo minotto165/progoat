@@ -15,6 +15,7 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/huh"
 	"github.com/eiannone/keyboard"
 	tsize "github.com/kopoli/go-terminal-size"
 	anyllm "github.com/mozilla-ai/any-llm-go"
@@ -38,9 +39,42 @@ var startCmd = &cobra.Command{
 	Short: "Start a learning session",
 	Long: `Begin the selected course. 
 Read the slides, write your code, and get feedback from the AI judge.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		courseID := args[0]
+
+		var courseID string
+
+		if len(args) > 0 {
+			courseID = args[0]
+		} else {
+
+			courses, err := getCourses()
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			options := []huh.Option[string]{}
+			for _, c := range courses {
+				title := c.Title
+				id := c.ID
+				key := fmt.Sprint(title, "(id: ", id, ")")
+				options = append(options, huh.NewOption(key, id))
+			}
+
+			form := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[string]().
+						Title("Choose Course").
+						Options(options...).
+						Value(&courseID),
+				),
+			).WithTheme(huh.ThemeBase())
+			err = form.Run()
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
 		startCourse(courseID)
 
 	},
@@ -79,27 +113,30 @@ func startCourse(courseID string) {
 
 		}
 
+		lessonPath := filepath.Clean(filepath.Join(coursePath, l.ID))
+		filePath := filepath.Clean(filepath.Join(lessonPath, l.FileName))
+		task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
+			"## Task:",
+			l.TaskDescription,
+			filePath,
+		)
+		out, err := renderWithTerminalWidth(task)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+
+		title := fmt.Sprint(course.Title, " - ", l.Title, ": task")
+		fmt.Println(title)
+
+		fmt.Print(out)
 		for {
-			lessonPath := filepath.Clean(filepath.Join(coursePath, l.ID))
-			filePath := filepath.Clean(filepath.Join(lessonPath, l.FileName))
-			task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
-				"## Task:",
-				l.TaskDescription,
-				filePath,
-			)
-			out, err := renderWithTerminalWidth(task)
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-
-			title := fmt.Sprint(course.Title, " - ", l.Title, ": task")
-			fmt.Println(title)
-
-			fmt.Print(out)
 
 			fmt.Print("Edit and save the file, then hit Enter.")
 			fmt.Scanln()
+
+			fmt.Print("\033[1A\033[K")
+			fmt.Print("\n\n")
 
 			response, err := judge(l, course.Language, filePath)
 
@@ -125,7 +162,7 @@ func startCourse(courseID string) {
 				enterMessage = "[Enter] Next Lesson"
 			} else {
 				result += "## ❌ WRONG...  \n\n"
-				enterMessage = "[Enter] Continue"
+				enterMessage = "[Enter] Retry"
 			}
 
 			result += "### AI Advice  \n"
@@ -141,6 +178,8 @@ func startCourse(courseID string) {
 			if isCorrect {
 				break
 			}
+
+			fmt.Print("\n")
 		}
 	}
 }
