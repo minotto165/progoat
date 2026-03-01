@@ -27,6 +27,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+type JudgeResult struct {
+	IsCorrect bool   `json:"is_correct"`
+	Advice    string `json:"advice"`
+}
+
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start [CourseID]",
@@ -63,49 +68,86 @@ func startCourse(courseID string) {
 				fmt.Println("Error:", err)
 				return
 			}
-			title := fmt.Sprint(course.Title, ": page ", i+1)
+			title := fmt.Sprint(course.Title, " - ", l.Title, ": page ", i+1)
 			fmt.Println(title)
 			fmt.Print(out)
 
-			fmt.Print("Press Enter to next page...")
+			fmt.Print("[Enter] Next page")
 			fmt.Scanln()
 			fmt.Print("\033[1A\033[K")
 			fmt.Print("\n\n\n")
 
 		}
-		lessonPath := filepath.Clean(filepath.Join(coursePath, l.ID))
-		filePath := filepath.Clean(filepath.Join(lessonPath, l.FileName))
-		task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
-			"## Task:",
-			l.TaskDescription,
-			filePath,
-		)
-		out, err := renderWithTerminalWidth(task)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
+
+		for {
+			lessonPath := filepath.Clean(filepath.Join(coursePath, l.ID))
+			filePath := filepath.Clean(filepath.Join(lessonPath, l.FileName))
+			task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
+				"## Task:",
+				l.TaskDescription,
+				filePath,
+			)
+			out, err := renderWithTerminalWidth(task)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+
+			title := fmt.Sprint(course.Title, " - ", l.Title, ": task")
+			fmt.Println(title)
+
+			fmt.Print(out)
+
+			fmt.Print("Edit and save the file, then hit Enter.")
+			fmt.Scanln()
+
+			response, err := judge(l, course.Language, filePath)
+
+			//for DEBUG...
+			// response, err = JudgeResult{
+			// 	IsCorrect: false,
+			// 	Advice:    "TEMP",
+			// }, nil
+
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+
+			isCorrect := response.IsCorrect
+			advice := response.Advice
+
+			var result string
+			var enterMessage string
+
+			if isCorrect {
+				result += "## 🎉 CORRECT!  \n\n"
+				enterMessage = "[Enter] Next Lesson"
+			} else {
+				result += "## ❌ WRONG...  \n\n"
+				enterMessage = "[Enter] Continue"
+			}
+
+			result += "### AI Advice  \n"
+			result += "> " + advice
+
+			out, err = renderWithTerminalWidth(result)
+
+			fmt.Print(out)
+
+			fmt.Print(enterMessage)
+			fmt.Scanln()
+
+			if isCorrect {
+				break
+			}
 		}
-
-		title := fmt.Sprint(course.Title, ": task")
-		fmt.Println(title)
-
-		fmt.Print(out)
-
-		fmt.Print("Edit and save the file, then hit Enter.")
-		fmt.Scanln()
-
-		err = judge(l, course.Language, filePath)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-
-		fmt.Scanln()
-
 	}
 }
 
-func judge(lesson Lesson, language, filePath string) error {
+func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
+
+	var judgeResult JudgeResult
 
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	s.Suffix = " Running..."
@@ -114,16 +156,19 @@ func judge(lesson Lesson, language, filePath string) error {
 
 	output, err := run(language, filePath)
 	if err != nil {
-		return err
+		return judgeResult, err
 	}
 	s.Stop()
 
-	fmt.Println("Output:")
-	fmt.Println("  ", output)
+	outputMd := "## Execution output\n"
+	outputMd += "> " + output
+
+	out, err := renderWithTerminalWidth(outputMd)
+	fmt.Print(out)
 
 	code, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
+		return judgeResult, err
 	}
 
 	s = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
@@ -133,20 +178,20 @@ func judge(lesson Lesson, language, filePath string) error {
 
 	code_s := string(code)
 
-	response, err := generate(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
+	response, err := generate_judgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
 	if err != nil {
-		return err
+		return judgeResult, err
 	}
 
 	s.Stop()
 
-	fmt.Println(response)
+	json.Unmarshal([]byte(response), &judgeResult)
 
-	return nil
+	return judgeResult, nil
 
 }
 
-func generate(task, code, out, modelOut string) (string, error) {
+func generate_judgement(task, code, out, modelOut string) (string, error) {
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
 	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
@@ -196,7 +241,7 @@ func generate(task, code, out, modelOut string) (string, error) {
 						"type": "object",
 						"properties": map[string]any{
 							"is_correct": map[string]any{"type": "boolean"},
-							"advice":     map[string]any{"type": "string", "description": "Short, helpful feedback in the student's language"},
+							"advice":     map[string]any{"type": "string", "description": "Super-Short, helpful feedback in the student's language. Use Markdown but don't break a line."},
 						},
 						"required": []string{"is_correct", "advice"},
 					},

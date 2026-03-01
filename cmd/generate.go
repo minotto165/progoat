@@ -61,7 +61,7 @@ AI will create lessons, including slides and coding exercises.`,
 		s.Suffix = " Generating..."
 		s.Start()
 
-		courseTitle = generation(prompt, length)
+		courseTitle = generate_course(prompt, length)
 
 		s.Stop()
 
@@ -71,7 +71,7 @@ AI will create lessons, including slides and coding exercises.`,
 	},
 }
 
-func generation(prompt, length string) string {
+func generate_course(prompt, length string) string {
 
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
