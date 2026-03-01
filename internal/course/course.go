@@ -54,23 +54,18 @@ func GetCourses(coursesPath string) ([]Course, error) {
 }
 
 func GetCourseStruct(courseID, coursesPath string) (Course, error) {
-	courses, err := GetCourses(coursesPath)
-	course := Course{}
-	found := false
+	courseJsonPath := filepath.Join(coursesPath, filepath.Base(courseID), "course.json")
+	courseJson, err := os.ReadFile(courseJsonPath)
 	if err != nil {
-		return course, err
+		if os.IsNotExist(err) {
+			return Course{}, fmt.Errorf("no such a course: %s", courseID)
+		}
+		return Course{}, err
 	}
 
-	for _, c := range courses {
-		ID := c.ID
-		if ID == courseID {
-			course = c
-			found = true
-			break
-		}
-	}
-	if !found {
-		return course, fmt.Errorf("no such a course: %s", courseID)
+	var course Course
+	if err := json.Unmarshal(courseJson, &course); err != nil {
+		return Course{}, fmt.Errorf("failed to parse JSON for course %s: %w", courseID, err)
 	}
 
 	return course, nil

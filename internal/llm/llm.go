@@ -116,12 +116,10 @@ Strictly follow these language requirements:
 		return "", err
 	}
 
-	if len(response.Choices) > 0 && len(response.Choices[0].Message.ToolCalls) > 0 && len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
-
-		return course.SaveCourse(response.Choices[0].Message.ToolCalls[0].Function.Arguments, coursesPath)
-	} else {
-		return "", fmt.Errorf("LLM returned an invalid JSON.")
+	if len(response.Choices) == 0 || len(response.Choices[0].Message.ToolCalls) == 0 || response.Choices[0].Message.ToolCalls[0].Function.Arguments == "" {
+		return "", fmt.Errorf("LLM returned an invalid or empty response")
 	}
+	return course.SaveCourse(response.Choices[0].Message.ToolCalls[0].Function.Arguments, coursesPath)
 
 }
 
@@ -189,9 +187,8 @@ func GenerateJudgement(task, code, out, modelOut string) (string, error) {
 		return "", err
 	}
 
-	if len(response.Choices) > 0 && len(response.Choices[0].Message.ToolCalls) > 0 && len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
-		return response.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
-	} else {
-		return "", fmt.Errorf("LLM returned an invalid JSON.")
+	if len(response.Choices) == 0 || len(response.Choices[0].Message.ToolCalls) == 0 || response.Choices[0].Message.ToolCalls[0].Function.Arguments == "" {
+		return "", fmt.Errorf("LLM returned an invalid or empty response")
 	}
+	return response.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
 }

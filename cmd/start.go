@@ -96,7 +96,7 @@ func startCourse(courseID string) error {
 			if err != nil {
 				return err
 			}
-			title := fmt.Sprint(course.Title, " - ", l.Title, ": page ", i+1)
+			title := fmt.Sprint(course.Title, " - ", l.Title, ": Page ", i+1)
 			fmt.Println(title)
 			fmt.Print(out)
 
@@ -109,7 +109,7 @@ func startCourse(courseID string) error {
 
 		lessonPath := filepath.Clean(filepath.Join(coursePath, filepath.Base(l.ID)))
 		filePath := filepath.Clean(filepath.Join(lessonPath, filepath.Base(l.FileName)))
-		task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
+		task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```\n*DISCLAIMER: AI-generated code is executed locally. Use at your own risk.*",
 			"## Task:",
 			l.TaskDescription,
 			filePath,
@@ -119,7 +119,7 @@ func startCourse(courseID string) error {
 			return err
 		}
 
-		title := fmt.Sprint(course.Title, " - ", l.Title, ": task")
+		title := fmt.Sprint(course.Title, " - ", l.Title, ": Task")
 		fmt.Println(title)
 
 		fmt.Print(out)
@@ -129,8 +129,10 @@ func startCourse(courseID string) error {
 			fmt.Scanln()
 
 			fmt.Print("\033[1A\033[K")
-			fmt.Print("\n\n")
+			fmt.Print("\n\n\n")
 
+			title = fmt.Sprint(course.Title, " - ", l.Title, ": Result")
+			fmt.Println(title)
 			response, err := judge(l, course.ProgrammingLanguage, filePath)
 
 			//for DEBUG...
@@ -249,7 +251,7 @@ func run(language, filePath string) (string, error) {
 		}
 		output_s = string(output)
 	} else {
-		output_s = string(fmt.Sprint("no output with ", language))
+		output_s = fmt.Sprint("no output with ", language)
 	}
 
 	return output_s, nil
