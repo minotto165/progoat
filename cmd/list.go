@@ -4,48 +4,23 @@ Copyright © 2026 minotto
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
+	"github.com/minotto165/progoat/internal/course"
 	"github.com/spf13/cobra"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all generated courses",
-	Long:  `Display all learning courses available on your computer.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "list",
+	Short:        "List all generated courses",
+	Long:         `Display all learning courses available on your computer.`,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 
-		files, err := os.ReadDir(coursesDir)
+		courses, err := course.GetCourses(coursesPath)
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-
-		var courses []Course
-		for _, file := range files {
-			if file.IsDir() {
-				dirName := file.Name()
-				coursesJsonPath := filepath.Join(coursesDir, dirName, "course.json")
-				coursesJson, err := os.ReadFile(coursesJsonPath)
-				if err != nil {
-					fmt.Println("Error:", err)
-					return
-				}
-				// Convert to struct
-				var course Course
-				err = json.Unmarshal([]byte(coursesJson), &course)
-				if err != nil {
-					fmt.Println("Error parsing JSON:", err)
-					return
-				}
-
-				// Add to slice
-				courses = append(courses, course)
-			}
+			return err
 		}
 
 		maxLength := 30
@@ -62,8 +37,8 @@ var listCmd = &cobra.Command{
 
 			fmt.Printf("%-30s %s\n", id, title)
 		}
+		return nil
 	},
-	//
 }
 
 func init() {

@@ -17,7 +17,8 @@ var configCmd = &cobra.Command{
 	Short: "Manage configuration and API keys",
 	Long: `Set up your AI API keys and choose your preferred AI models. 
 Settings are saved locally on your machine.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		var confirm bool
 		var provider string
@@ -38,8 +39,7 @@ Settings are saved locally on your machine.`,
 
 		err := form.Run()
 		if err != nil {
-			fmt.Println("Configuration cancelled:", err)
-			return
+			return fmt.Errorf("Cancelled: %w", err)
 		}
 
 		var apiKey string
@@ -105,8 +105,7 @@ Settings are saved locally on your machine.`,
 
 		err = form.Run()
 		if err != nil {
-			fmt.Println("Configuration cancelled:", err)
-			return
+			return fmt.Errorf("Cancelled: %w", err)
 		}
 
 		if confirm {
@@ -124,7 +123,7 @@ Settings are saved locally on your machine.`,
 		} else {
 			fmt.Println("Configuration cancelled.")
 		}
-
+		return nil
 	},
 }
 

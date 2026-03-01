@@ -11,9 +11,10 @@ import (
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Show version information",
-	Long:  `Display the current version number of Progoat.`,
+	Use:          "version",
+	Short:        "Show version information",
+	Long:         `Display the current version number of Progoat.`,
+	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("version called")
 	},
