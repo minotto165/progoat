@@ -17,12 +17,11 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all generated courses",
 	Long:  `Display all learning courses available on your computer.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		files, err := os.ReadDir(coursesPath)
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return err
 		}
 
 		var courses []Course
@@ -32,15 +31,13 @@ var listCmd = &cobra.Command{
 				coursesJsonPath := filepath.Join(coursesPath, dirName, "course.json")
 				coursesJson, err := os.ReadFile(coursesJsonPath)
 				if err != nil {
-					fmt.Println("Error:", err)
-					return
+					return err
 				}
 				// Convert to struct
 				var course Course
 				err = json.Unmarshal([]byte(coursesJson), &course)
 				if err != nil {
-					fmt.Println("Error parsing JSON:", err)
-					return
+					return fmt.Errorf("failed to load course config: %w", err)
 				}
 
 				// Add to slice
@@ -62,8 +59,8 @@ var listCmd = &cobra.Command{
 
 			fmt.Printf("%-30s %s\n", id, title)
 		}
+		return nil
 	},
-	//
 }
 
 func init() {

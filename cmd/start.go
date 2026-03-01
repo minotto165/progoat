@@ -16,7 +16,6 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/huh"
-	"github.com/eiannone/keyboard"
 	tsize "github.com/kopoli/go-terminal-size"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	"github.com/mozilla-ai/any-llm-go/providers/anthropic"
@@ -40,7 +39,7 @@ var startCmd = &cobra.Command{
 	Long: `Begin the selected course. 
 Read the slides, write your code, and get feedback from the AI judge.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 
 		var courseID string
 
@@ -50,8 +49,7 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 
 			courses, err := getCourses()
 			if err != nil {
-				fmt.Println(err)
-				return
+				return err
 			}
 
 			options := []huh.Option[string]{}
@@ -72,24 +70,24 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 			).WithTheme(huh.ThemeBase())
 			err = form.Run()
 			if err != nil {
-				fmt.Println(err)
-				return
+				return err
 			}
 		}
 
 		startCourse(courseID)
 
+		return nil
+
 	},
 }
 
-func startCourse(courseID string) {
+func startCourse(courseID string) error {
 
 	course, err := getCourseStruct(courseID)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		return err
 	}
-	coursePath := filepath.Join(coursesPath, course.ID)
+	coursePath := filepath.Join(coursesPath, filepath.ToSlash(course.ID))
 
 	fmt.Println("[INFO] Course Directory:", coursePath)
 
@@ -97,12 +95,10 @@ func startCourse(courseID string) {
 
 		clearScreen()
 		slides := l.Slides
-		defer keyboard.Close()
 		for i, s := range slides {
 			out, err := renderWithTerminalWidth(s)
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 			title := fmt.Sprint(course.Title, " - ", l.Title, ": page ", i+1)
 			fmt.Println(title)
@@ -115,8 +111,8 @@ func startCourse(courseID string) {
 
 		}
 
-		lessonPath := filepath.Clean(filepath.Join(coursePath, l.ID))
-		filePath := filepath.Clean(filepath.Join(lessonPath, l.FileName))
+		lessonPath := filepath.Clean(filepath.Join(coursePath, filepath.Base(l.ID)))
+		filePath := filepath.Clean(filepath.Join(lessonPath, filepath.Base(l.FileName)))
 		task := fmt.Sprintf("%s\n%s\n\n**File to edit:**\n```text\n%s\n```",
 			"## Task:",
 			l.TaskDescription,
@@ -124,8 +120,7 @@ func startCourse(courseID string) {
 		)
 		out, err := renderWithTerminalWidth(task)
 		if err != nil {
-			fmt.Println("Error:", err)
-			return
+			return err
 		}
 
 		title := fmt.Sprint(course.Title, " - ", l.Title, ": task")
@@ -149,8 +144,7 @@ func startCourse(courseID string) {
 			// }, nil
 
 			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				return err
 			}
 
 			isCorrect := response.IsCorrect
@@ -184,6 +178,7 @@ func startCourse(courseID string) {
 			fmt.Print("\n")
 		}
 	}
+	return nil
 }
 
 func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
@@ -196,10 +191,10 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 	defer s.Stop()
 
 	output, err := run(language, filePath)
+	s.Stop()
 	if err != nil {
 		return judgeResult, err
 	}
-	s.Stop()
 
 	outputMd := "## Execution output\n"
 	outputMd += "> " + output
@@ -220,11 +215,10 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 	code_s := string(code)
 
 	response, err := generateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
+	s.Stop()
 	if err != nil {
 		return judgeResult, err
 	}
-
-	s.Stop()
 
 	err = json.Unmarshal([]byte(response), &judgeResult)
 	if err != nil {
@@ -259,7 +253,7 @@ func generateJudgement(task, code, out, modelOut string) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("Error during initializing model:%s", err)
+		return "", fmt.Errorf("failed to initialize model:%w", err)
 	}
 
 	// Generate!
@@ -356,7 +350,7 @@ func getCourses() ([]Course, error) {
 	for _, file := range files {
 		if file.IsDir() {
 			dirName := file.Name()
-			coursesJsonPath := filepath.Join(coursesPath, dirName, "course.json")
+			coursesJsonPath := filepath.Join(coursesPath, filepath.Base(dirName), "course.json")
 			coursesJson, err := os.ReadFile(coursesJsonPath)
 			if err != nil {
 				return nil, err
@@ -365,7 +359,7 @@ func getCourses() ([]Course, error) {
 			var course Course
 			err = json.Unmarshal(coursesJson, &course)
 			if err != nil {
-				return nil, fmt.Errorf("Error parsing JSON: %s", err)
+				return nil, fmt.Errorf("failed to parse JSON: %w", err)
 			}
 
 			// Add to slice
@@ -391,8 +385,8 @@ func getCourseStruct(courseID string) (Course, error) {
 			break
 		}
 	}
-	if found {
-		return course, fmt.Errorf("No such a course: %s", courseID)
+	if !found {
+		return course, fmt.Errorf("no such a course: %s", courseID)
 	}
 
 	return course, nil

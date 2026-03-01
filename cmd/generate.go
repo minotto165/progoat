@@ -30,14 +30,14 @@ var generateCmd = &cobra.Command{
 	Long: `Generate a new learning course by providing a topic. 
 AI will create lessons, including slides and coding exercises.`,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		length, _ := cmd.Flags().GetString("length")
 		switch length {
 		case "short", "medium", "long":
 			break
 		default:
-			fmt.Println("Invalid length. Options: short, medium, long.")
-			return
+			return fmt.Errorf("Invalid length. Options: short, medium, long.")
+
 		}
 
 		var prompt string
@@ -55,8 +55,7 @@ AI will create lessons, including slides and coding exercises.`,
 			).WithTheme(huh.ThemeBase())
 			err := form.Run()
 			if err != nil {
-				fmt.Println("Canceled.")
-				return
+				return fmt.Errorf("Cancelled.")
 			}
 		}
 
@@ -70,8 +69,7 @@ AI will create lessons, including slides and coding exercises.`,
 
 		courseTitle, err := generateCourse(prompt, length)
 		if err != nil {
-			fmt.Println(err)
-			return
+			return err
 		}
 
 		s.Stop()
@@ -79,6 +77,7 @@ AI will create lessons, including slides and coding exercises.`,
 		if courseTitle != "" {
 			fmt.Println("Course generated:", courseTitle)
 		}
+		return nil
 	},
 }
 
@@ -200,33 +199,32 @@ func saveCourse(response string) (string, error) {
 	var course Course
 	err := json.Unmarshal([]byte(response), &course)
 	if err != nil {
-		return "", fmt.Errorf("Error parsing JSON:%s", err)
+		return "", fmt.Errorf("failed to parse JSON:%w", err)
 	}
 
 	// Crate course directory
-	coursePath := filepath.Join(coursesPath, course.ID)
+	coursePath := filepath.Join(coursesPath, filepath.Base(course.ID))
 	os.MkdirAll(coursePath, 0755)
 
 	// Update courses.json
 	coursesJsonPath := filepath.Join(coursePath, "course.json")
 	coursesJson, err := json.Marshal(course) // Convert to string(JSON)
 	if err != nil {
-		return "", fmt.Errorf("Error marshaling JSON:%s", err)
+		return "", fmt.Errorf("failed to marshal JSON:%w", err)
 	}
-	coursesJson = []byte(coursesJson) // Convert to []byte
 
 	os.WriteFile(coursesJsonPath, coursesJson, 0755)
 
 	// Create lessons direcotries
 	for _, lesson := range course.Lessons {
-		lessonPath := filepath.Join(coursePath, lesson.ID)
+		lessonPath := filepath.Join(coursePath, filepath.Base(lesson.ID))
 		os.MkdirAll(lessonPath, 0755)
 
 		// Create slides
 		slides := lesson.Slides
 		slidesContent, err := json.Marshal(slides)
 		if err != nil {
-			return "", fmt.Errorf("Error marshaling JSON:%s", err)
+			return "", fmt.Errorf("failed to marshal JSON:%w", err)
 		}
 
 		// Write Files
