@@ -4,27 +4,20 @@ Copyright © 2026 minotto
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/huh"
-	tsize "github.com/kopoli/go-terminal-size"
-	anyllm "github.com/mozilla-ai/any-llm-go"
-	"github.com/mozilla-ai/any-llm-go/providers/anthropic"
-	"github.com/mozilla-ai/any-llm-go/providers/gemini"
-	"github.com/mozilla-ai/any-llm-go/providers/openai"
-	"github.com/mozilla-ai/any-llm-go/providers/zai"
+	"github.com/minotto165/progoat/internal/course"
+	"github.com/minotto165/progoat/internal/llm"
+	"github.com/minotto165/progoat/internal/ui"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type JudgeResult struct {
@@ -38,7 +31,8 @@ var startCmd = &cobra.Command{
 	Short: "Start a learning session",
 	Long: `Begin the selected course. 
 Read the slides, write your code, and get feedback from the AI judge.`,
-	Args: cobra.MaximumNArgs(1),
+	Args:         cobra.MaximumNArgs(1),
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		var courseID string
@@ -47,7 +41,7 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 			courseID = args[0]
 		} else {
 
-			courses, err := getCourses()
+			courses, err := course.GetCourses(coursesPath)
 			if err != nil {
 				return err
 			}
@@ -74,8 +68,10 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 			}
 		}
 
-		startCourse(courseID)
-
+		err := startCourse(courseID)
+		if err != nil {
+			return err
+		}
 		return nil
 
 	},
@@ -83,20 +79,20 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 
 func startCourse(courseID string) error {
 
-	course, err := getCourseStruct(courseID)
+	course, err := course.GetCourseStruct(courseID, coursesPath)
 	if err != nil {
 		return err
 	}
-	coursePath := filepath.Join(coursesPath, filepath.ToSlash(course.ID))
+	coursePath := filepath.Join(coursesPath, filepath.Base(course.ID))
 
 	fmt.Println("[INFO] Course Directory:", coursePath)
 
 	for _, l := range course.Lessons {
 
-		clearScreen()
+		ui.ClearScreen()
 		slides := l.Slides
 		for i, s := range slides {
-			out, err := renderWithTerminalWidth(s)
+			out, err := ui.RenderWithTerminalWidth(s)
 			if err != nil {
 				return err
 			}
@@ -118,7 +114,7 @@ func startCourse(courseID string) error {
 			l.TaskDescription,
 			filePath,
 		)
-		out, err := renderWithTerminalWidth(task)
+		out, err := ui.RenderWithTerminalWidth(task)
 		if err != nil {
 			return err
 		}
@@ -135,7 +131,7 @@ func startCourse(courseID string) error {
 			fmt.Print("\033[1A\033[K")
 			fmt.Print("\n\n")
 
-			response, err := judge(l, course.Language, filePath)
+			response, err := judge(l, course.ProgrammingLanguage, filePath)
 
 			//for DEBUG...
 			// response, err = JudgeResult{
@@ -164,7 +160,7 @@ func startCourse(courseID string) error {
 			result += "### AI Advice  \n"
 			result += "> " + advice
 
-			out, err = renderWithTerminalWidth(result)
+			out, err = ui.RenderWithTerminalWidth(result)
 
 			fmt.Print(out)
 
@@ -181,7 +177,7 @@ func startCourse(courseID string) error {
 	return nil
 }
 
-func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
+func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error) {
 
 	var judgeResult JudgeResult
 
@@ -199,7 +195,7 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 	outputMd := "## Execution output\n"
 	outputMd += "> " + output
 
-	out, err := renderWithTerminalWidth(outputMd)
+	out, err := ui.RenderWithTerminalWidth(outputMd)
 	fmt.Print(out)
 
 	code, err := os.ReadFile(filePath)
@@ -214,7 +210,7 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 
 	code_s := string(code)
 
-	response, err := generateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
+	response, err := llm.GenerateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
 	s.Stop()
 	if err != nil {
 		return judgeResult, err
@@ -227,77 +223,6 @@ func judge(lesson Lesson, language, filePath string) (JudgeResult, error) {
 
 	return judgeResult, nil
 
-}
-
-func generateJudgement(task, code, out, modelOut string) (string, error) {
-	// Set informations
-	activeProvider := viper.GetString("active_provider")
-	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
-	activeApiKey := viper.GetString(fmt.Sprintf("providers.%s.api_key", activeProvider))
-
-	// Set model
-	var provider anyllm.Provider
-	var err error
-
-	switch activeProvider {
-	case "openai":
-		provider, err = openai.New(anyllm.WithAPIKey(activeApiKey))
-	case "gemini":
-		provider, err = gemini.New(anyllm.WithAPIKey(activeApiKey))
-	case "anthropic":
-		provider, err = anthropic.New(anyllm.WithAPIKey(activeApiKey))
-	case "zai":
-		provider, err = zai.New(anyllm.WithAPIKey(activeApiKey))
-	default:
-		return "", fmt.Errorf("Provider '%s' is not supported or not configured. Please run 'progoat config' first.\n", activeProvider)
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("failed to initialize model:%w", err)
-	}
-
-	// Generate!
-	ctx := context.Background()
-	response, err := provider.Completion(ctx, anyllm.CompletionParams{
-		Model: activeModel,
-		Messages: []anyllm.Message{
-			{
-				Role:    anyllm.RoleSystem,
-				Content: `You are a programming instructor. Compare the student's code and output with the task and model answer. Check if the logic and the output meet the requirements. use Markdown.`,
-			},
-			{Role: anyllm.RoleUser, Content: "Task:" + task},
-			{Role: anyllm.RoleUser, Content: "Model Output:" + modelOut},
-			{Role: anyllm.RoleUser, Content: "Student Code:" + code},
-			{Role: anyllm.RoleUser, Content: "Student Output:" + out},
-		},
-		Tools: []anyllm.Tool{
-			{
-				Type: "function",
-				Function: anyllm.Function{
-					Name: "judge_code",
-					Parameters: map[string]any{
-						"type": "object",
-						"properties": map[string]any{
-							"is_correct": map[string]any{"type": "boolean"},
-							"advice":     map[string]any{"type": "string", "description": "Super-Short, helpful feedback in the student's language. Use Markdown but don't break a line."},
-						},
-						"required": []string{"is_correct", "advice"},
-					},
-				},
-			},
-		},
-		ToolChoice: "required",
-	})
-
-	if err != nil {
-		return "", err
-	}
-
-	if len(response.Choices) > 0 && len(response.Choices[0].Message.ToolCalls) > 0 && len(response.Choices[0].Message.ToolCalls[0].Function.Arguments) > 0 {
-		return response.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
-	} else {
-		return "", fmt.Errorf("LLM returned an invalid JSON.")
-	}
 }
 
 func run(language, filePath string) (string, error) {
@@ -328,90 +253,6 @@ func run(language, filePath string) (string, error) {
 	}
 
 	return output_s, nil
-}
-
-func clearScreen() {
-	switch runtime.GOOS {
-	case "windows":
-		cmd := exec.Command("cmd", "/c", "cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-	default:
-		fmt.Print("\033[H\033[2J")
-	}
-}
-
-func getCourses() ([]Course, error) {
-	files, err := os.ReadDir(coursesPath)
-	if err != nil {
-		return nil, err
-	}
-	var courses []Course
-	for _, file := range files {
-		if file.IsDir() {
-			dirName := file.Name()
-			coursesJsonPath := filepath.Join(coursesPath, filepath.Base(dirName), "course.json")
-			coursesJson, err := os.ReadFile(coursesJsonPath)
-			if err != nil {
-				return nil, err
-			}
-			// Convert to struct
-			var course Course
-			err = json.Unmarshal(coursesJson, &course)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse JSON: %w", err)
-			}
-
-			// Add to slice
-			courses = append(courses, course)
-		}
-	}
-	return courses, nil
-}
-
-func getCourseStruct(courseID string) (Course, error) {
-	courses, err := getCourses()
-	course := Course{}
-	found := false
-	if err != nil {
-		return course, err
-	}
-
-	for _, c := range courses {
-		ID := c.ID
-		if ID == courseID {
-			course = c
-			found = true
-			break
-		}
-	}
-	if !found {
-		return course, fmt.Errorf("no such a course: %s", courseID)
-	}
-
-	return course, nil
-}
-
-func renderWithTerminalWidth(raw string) (string, error) {
-	s, err := tsize.GetSize()
-	width := 0
-	if err != nil {
-		width = 80
-		fmt.Println(err)
-	} else {
-		width = s.Width
-	}
-
-	r, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(width-5),
-	)
-
-	out, err := r.Render(raw)
-	if err != nil {
-		return "", err
-	}
-	return out, nil
 }
 
 func init() {

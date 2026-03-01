@@ -11,9 +11,10 @@ import (
 
 // statusCmd represents the status command
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Check your learning progress",
-	Long:  `Show your current progress and a list of completed lessons.`,
+	Use:          "status",
+	Short:        "Check your learning progress",
+	Long:         `Show your current progress and a list of completed lessons.`,
+	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("status called")
 	},

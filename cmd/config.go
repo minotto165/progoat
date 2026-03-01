@@ -17,6 +17,7 @@ var configCmd = &cobra.Command{
 	Short: "Manage configuration and API keys",
 	Long: `Set up your AI API keys and choose your preferred AI models. 
 Settings are saved locally on your machine.`,
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		var confirm bool

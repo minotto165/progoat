@@ -34,7 +34,7 @@ var coursesPath = filepath.Join(basePath, "courses")
 var configPath = filepath.Join(basePath, "config.yaml")
 
 func init() {
-	os.MkdirAll(basePath, 0755)
+	os.MkdirAll(basePath, 0700)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(configPath)
 	viper.ReadInConfig()
