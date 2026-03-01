@@ -11,7 +11,9 @@ Progoat is an LLM-powered CLI tool for programming education, inspired by Progat
 ![License](https://img.shields.io/github/license/minotto165/progoat)
 ![Go Version](https://img.shields.io/github/go-mod/go-version/minotto165/progoat)
 
-<!--GIF HERE-->
+## Demo
+
+![Progoat Demo](./docs/demo.gif)
 
 ## Features
 
