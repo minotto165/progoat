@@ -116,7 +116,8 @@ Strictly follow these language requirements:
 3. In "initial_code", provide the actual source code in the target programming language, but ensure all explanatory comments are in the user's language.
 4. Use markdown for the slides to make them easy to read.
 5. Course ID should be short and super simple.
-6. Course Title should be simple.`,
+6. Course Title should be simple.
+7. The first slide of the first lesson MUST be a "Setup Guide". It should explain how to install the necessary environment for the language and how to run the code on a local machine.`,
 			},
 			{Role: anyllm.RoleUser, Content: prompt},
 			{Role: anyllm.RoleUser, Content: "Course length(short,medium,long):" + length},
@@ -146,8 +147,9 @@ Strictly follow these language requirements:
 											"description": "An array of markdown strings, where each element is a single slide page. " +
 												"Follow these rules: " +
 												"1. Use '##' for headers to define the start of a new slide content. " +
-												"2. For language requirements, put the English term first, followed by the Japanese translation in parentheses, like 'Function (ja:スライド)'. " +
-												"3. Do not include page numbers in the markdown string itself."},
+												"1. Write naturally in the student's language (the language used in the prompt). " +
+												"3. Do not include page numbers in the markdown string itself." +
+												"4. The VERY FIRST slide of the FIRST lesson must be a 'Local Setup Guide' for the programming language (e.g., installation, run commands)."},
 										"task_description": map[string]any{"type": "string"},
 										"initial_code":     map[string]any{"type": "string", "description": "The boilerplate code for the student to start with."},
 										"correct_output":   map[string]any{"type": "string", "description": "The expected standard output (stdout) when the task is correctly implemented."},
