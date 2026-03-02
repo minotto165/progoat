@@ -163,6 +163,9 @@ func startCourse(courseID string) error {
 			result += "> " + advice
 
 			out, err = ui.RenderWithTerminalWidth(result)
+			if err != nil {
+				return err
+			}
 
 			fmt.Print(out)
 
@@ -198,6 +201,9 @@ func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error)
 	outputMd += "> " + output
 
 	out, err := ui.RenderWithTerminalWidth(outputMd)
+	if err != nil {
+		return judgeResult, err
+	}
 	fmt.Print(out)
 
 	code, err := os.ReadFile(filePath)
