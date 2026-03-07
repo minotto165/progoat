@@ -79,6 +79,44 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 
 func startCourse(courseID string) error {
 
+	progressStatus, currentLesson, err := course.LoadProgressStatus(courseID, progressPath)
+	if err != nil {
+		return err
+	}
+
+	var action string
+
+	switch progressStatus {
+	case course.Completed:
+		huh.NewSelect[string]().
+			Title("Course already completed.").
+			Options(
+				huh.NewOption("Keep current code", "keep"),
+				huh.NewOption("Start fresh", "reset"),
+			).Value(&action).WithTheme(huh.ThemeBase()).Run()
+
+	case course.InProgress:
+		huh.NewSelect[string]().
+			Title("Course in progress.").
+			Options(
+				huh.NewOption("Continue", "continue"),
+				huh.NewOption("Start over", "reset"),
+			).Value(&action).WithTheme(huh.ThemeBase()).Run()
+
+	default:
+		action = "keep"
+	}
+
+	if action == "reset" {
+		courseJson, err := course.GetCourseJson(courseID, coursesPath)
+		if err != nil {
+			return err
+		}
+		course.SaveCourse(courseJson, coursesPath)
+
+		course.ResetProgress(courseID, progressPath)
+	}
+
 	c, err := course.GetCourseStruct(courseID, coursesPath)
 	if err != nil {
 		return err
@@ -88,6 +126,12 @@ func startCourse(courseID string) error {
 	fmt.Println("[INFO] Course Directory:", coursePath)
 
 	for i, l := range c.Lessons {
+
+		if action == "continue" {
+			if currentLesson != l.Title {
+				continue
+			}
+		}
 
 		ui.ClearScreen()
 		slides := l.Slides

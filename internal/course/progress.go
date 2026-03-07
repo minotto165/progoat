@@ -2,7 +2,6 @@ package course
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"slices"
 	"time"
@@ -80,11 +79,48 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 	return nil
 }
 
-func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, error) {
+func ResetProgress(courseID, progressPath string) error {
+
+	var progresses []Progress
 
 	progressJson, err := os.ReadFile(progressPath)
 	if err != nil {
-		return NotStarted, err
+		return err
+	}
+	err = json.Unmarshal(progressJson, &progresses)
+	if err != nil {
+		return err
+	}
+	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
+
+	idx := -1
+	for i, p := range progresses {
+		if p.CourseID == courseID {
+			idx = i
+			break
+		}
+	}
+
+	progresses = append(progresses[:idx], progresses[idx+1:]...)
+
+	progressJson, err = json.MarshalIndent(progresses, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(progressPath, progressJson, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, error) {
+
+	progressJson, err := os.ReadFile(progressPath)
+	if err != nil {
+		return NotStarted, "", err
 	}
 
 	var progresses []Progress
@@ -95,13 +131,13 @@ func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, error) {
 
 			switch {
 			case len(p.CompletedLessons) == p.TotalLessons:
-				return Completed, nil
+				return Completed, "", nil
 			case len(p.CompletedLessons) == 0:
-				return NotStarted, nil
+				return NotStarted, "", nil
 			default:
-				return InProgress, nil
+				return InProgress, p.CurrentLesson, nil
 			}
 		}
 	}
-	return NotStarted, fmt.Errorf("course not found: %s", courseID)
+	return NotStarted, "", nil
 }
