@@ -17,35 +17,32 @@ type Progress struct {
 func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath string) error {
 
 	var progresses []Progress
-	var progressJson []byte
 
-	if exists(progressPath) {
-		// ファイルがある場合
-		progressJson, err := os.ReadFile(progressPath)
-		if err != nil {
+	progressJson, err := os.ReadFile(progressPath)
+	if err != nil {
+		if os.IsNotExist(err) {
 			return err
 		}
+	} else if len(progressJson) > 0 {
 		err = json.Unmarshal(progressJson, &progresses)
 		if err != nil {
 			return err
 		}
 	} else {
-		// ファイルがない場合
 		progresses = []Progress{}
 	}
 
 	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
-	found := false
-	idx := 0
+
+	idx := -1
 	for i, p := range progresses {
 		if p.CourseID == courseID {
-			found = true
 			idx = i
 			break
 		}
 	}
 
-	if !found {
+	if idx == -1 {
 		progresses = append(progresses, Progress{courseID, []string{}, "", time.Now()})
 		idx = len(progresses) - 1
 	}
@@ -57,17 +54,15 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 	progresses[idx].CurrentLesson = currentLessonID
 	progresses[idx].LastAccessed = time.Now()
 
-	progressJson, err := json.Marshal(progresses)
+	progressJson, err = json.MarshalIndent(progresses, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	os.WriteFile(progressPath, progressJson, 0755)
+	err = os.WriteFile(progressPath, progressJson, 0644)
+	if err != nil {
+		return err
+	}
 
 	return nil
-}
-
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
 }
