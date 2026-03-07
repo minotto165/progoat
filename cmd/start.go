@@ -79,15 +79,15 @@ Read the slides, write your code, and get feedback from the AI judge.`,
 
 func startCourse(courseID string) error {
 
-	course, err := course.GetCourseStruct(courseID, coursesPath)
+	c, err := course.GetCourseStruct(courseID, coursesPath)
 	if err != nil {
 		return err
 	}
-	coursePath := filepath.Join(coursesPath, filepath.Base(course.ID))
+	coursePath := filepath.Join(coursesPath, filepath.Base(c.ID))
 
 	fmt.Println("[INFO] Course Directory:", coursePath)
 
-	for _, l := range course.Lessons {
+	for i, l := range c.Lessons {
 
 		ui.ClearScreen()
 		slides := l.Slides
@@ -96,7 +96,7 @@ func startCourse(courseID string) error {
 			if err != nil {
 				return err
 			}
-			title := fmt.Sprint(course.Title, " - ", l.Title, ": Page ", i+1)
+			title := fmt.Sprint(c.Title, " - ", l.Title, ": Page ", i+1)
 			fmt.Println(title)
 			fmt.Print(out)
 
@@ -119,7 +119,7 @@ func startCourse(courseID string) error {
 			return err
 		}
 
-		title := fmt.Sprint(course.Title, " - ", l.Title, ": Task")
+		title := fmt.Sprint(c.Title, " - ", l.Title, ": Task")
 		fmt.Println(title)
 
 		fmt.Print(out)
@@ -131,9 +131,9 @@ func startCourse(courseID string) error {
 			fmt.Print("\033[1A\033[K")
 			fmt.Print("\n\n\n")
 
-			title = fmt.Sprint(course.Title, " - ", l.Title, ": Result")
+			title = fmt.Sprint(c.Title, " - ", l.Title, ": Result")
 			fmt.Println(title)
-			response, err := judge(l, course.ProgrammingLanguage, filePath)
+			response, err := judge(l, c.ProgrammingLanguage, filePath)
 
 			//for DEBUG...
 			// response, err = JudgeResult{
@@ -173,12 +173,33 @@ func startCourse(courseID string) error {
 			fmt.Scanln()
 
 			if isCorrect {
+				var currentLessonID string
+				if i+1 >= len(c.Lessons) {
+					currentLessonID = ""
+				} else {
+					currentLessonID = c.Lessons[i+1].ID
+				}
+				course.SaveProgress(courseID, l.ID, currentLessonID, progressPath)
 				break
 			}
 
 			fmt.Print("\n")
 		}
 	}
+
+	ui.ClearScreen()
+
+	message := fmt.Sprintf("## 🎉 Course Completed! 🐐 \n\nYou've completed the course: %s", c.Title)
+	out, err := ui.RenderWithTerminalWidth(message)
+	if err != nil {
+		return err
+	}
+
+	title := fmt.Sprint(c.Title, " - ", ": Finished!")
+	fmt.Println(title)
+
+	fmt.Print(out)
+
 	return nil
 }
 
@@ -197,7 +218,7 @@ func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error)
 		return judgeResult, err
 	}
 
-	outputMd := "## Execution output\n"
+	outputMd := "## Execution Output\n"
 	outputMd += "> " + output
 
 	out, err := ui.RenderWithTerminalWidth(outputMd)

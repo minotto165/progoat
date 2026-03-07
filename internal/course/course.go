@@ -13,7 +13,6 @@ type Course struct {
 	Description         string   `json:"description"`
 	ProgrammingLanguage string   `json:"programming_language"`
 	Lessons             []Lesson `json:"lessons"`
-	IsCompleted         bool     `json:"is_completed"`
 }
 
 type Lesson struct {
@@ -24,7 +23,6 @@ type Lesson struct {
 	InitialCode     string   `json:"initial_code"`
 	CorrectOutput   string   `json:"correct_output"`
 	FileName        string   `json:"file_name"`
-	IsCompleted     bool     `json:"is_completed"`
 }
 
 func GetCourses(coursesPath string) ([]Course, error) {
