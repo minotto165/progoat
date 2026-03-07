@@ -86,12 +86,12 @@ func SaveCourse(response, coursesPath string) (string, error) {
 
 	// Update courses.json
 	coursesJsonPath := filepath.Join(coursePath, "course.json")
-	coursesJson, err := json.Marshal(course) // Convert to string(JSON)
+	coursesJson, err := json.MarshalIndent(course, "", "  ") // Convert to string(JSON)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal JSON:%w", err)
 	}
 
-	os.WriteFile(coursesJsonPath, coursesJson, 0755)
+	os.WriteFile(coursesJsonPath, coursesJson, 0644)
 
 	// Create lessons direcotries
 	for _, lesson := range course.Lessons {
