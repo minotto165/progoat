@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/minotto165/progoat/internal/course"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +16,8 @@ var statusCmd = &cobra.Command{
 	Long:         `Show your current progress and a list of completed lessons.`,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println(progressPath)
-		err := course.SaveProgress("course1", "lesson2", "lesson3", progressPath)
-		return err
+		fmt.Println("Coming soon...")
+		return nil
 	},
 }
 
