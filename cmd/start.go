@@ -179,7 +179,7 @@ func startCourse(courseID string) error {
 				} else {
 					currentLessonID = c.Lessons[i+1].ID
 				}
-				course.SaveProgress(courseID, l.ID, currentLessonID, progressPath)
+				course.SaveProgress(courseID, l.ID, currentLessonID, progressPath, len(c.Lessons))
 				break
 			}
 

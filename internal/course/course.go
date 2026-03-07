@@ -58,7 +58,7 @@ func GetCourseStruct(courseID, coursesPath string) (Course, error) {
 	courseJson, err := os.ReadFile(courseJsonPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return Course{}, fmt.Errorf("no such a course: %s", courseID)
+			return Course{}, fmt.Errorf("course not found: %s", courseID)
 		}
 		return Course{}, err
 	}
