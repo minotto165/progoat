@@ -15,8 +15,9 @@ var statusCmd = &cobra.Command{
 	Short:        "Check your learning progress",
 	Long:         `Show your current progress and a list of completed lessons.`,
 	SilenceUsage: true,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("status called")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("Coming soon...")
+		return nil
 	},
 }
 

@@ -32,6 +32,7 @@ var homePath, _ = os.UserHomeDir()
 var basePath = filepath.Join(homePath, ".progoat")
 var coursesPath = filepath.Join(basePath, "courses")
 var configPath = filepath.Join(basePath, "config.yaml")
+var progressPath = filepath.Join(basePath, "progress.json")
 
 func init() {
 	os.MkdirAll(basePath, 0700)
@@ -42,8 +43,3 @@ func init() {
 	os.MkdirAll(coursesPath, 0755)
 
 }
-
-// func exists(path string) bool {
-// 	_, err := os.Stat(path)
-// 	return !os.IsNotExist(err)
-// }
