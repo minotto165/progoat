@@ -26,7 +26,7 @@ const (
 
 func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath string, totalLessons int) error {
 
-	progresses, err := loadProgresses(progressPath)
+	progresses, err := LoadProgresses(progressPath)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 
 func ResetProgress(courseID, progressPath string) error {
 
-	progresses, err := loadProgresses(progressPath)
+	progresses, err := LoadProgresses(progressPath)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func ResetProgress(courseID, progressPath string) error {
 
 func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, error) {
 
-	progresses, err := loadProgresses(progressPath)
+	progresses, err := LoadProgresses(progressPath)
 	if err != nil {
 		return NotStarted, "", err
 	}
@@ -127,7 +127,7 @@ func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, 
 	return NotStarted, "", nil
 }
 
-func loadProgresses(progressPath string) ([]Progress, error) {
+func LoadProgresses(progressPath string) ([]Progress, error) {
 	progressJson, err := os.ReadFile(progressPath)
 	if err != nil {
 		if !os.IsNotExist(err) {

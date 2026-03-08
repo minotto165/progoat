@@ -94,6 +94,9 @@ func startCourse(courseID string) error {
 				huh.NewOption("Keep current code", "keep"),
 				huh.NewOption("Start fresh", "reset"),
 			).Value(&action).WithTheme(huh.ThemeBase()).Run()
+		if err != nil {
+			return err
+		}
 
 	case course.InProgress:
 		err = huh.NewSelect[string]().
@@ -102,12 +105,12 @@ func startCourse(courseID string) error {
 				huh.NewOption("Continue", "continue"),
 				huh.NewOption("Start over", "reset"),
 			).Value(&action).WithTheme(huh.ThemeBase()).Run()
+		if err != nil {
+			return err
+		}
 
 	default:
 		action = "keep"
-	}
-	if err != nil {
-		return err
 	}
 
 	if action == "reset" {
