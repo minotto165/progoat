@@ -55,7 +55,12 @@ You can select a course from the list or provide the CourseID as an argument.`,
 			}
 		}
 
-		path := filepath.Join(coursesPath, courseID)
+		// 安全装置
+		baseID := filepath.Base(courseID)
+		if baseID == ".." || baseID == "." || baseID == "/" || baseID == "\\" {
+			return fmt.Errorf("invalid course ID: %s", courseID)
+		}
+		path := filepath.Join(coursesPath, baseID)
 
 		err := os.RemoveAll(path)
 		if err != nil {
