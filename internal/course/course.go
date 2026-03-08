@@ -73,7 +73,7 @@ func GetCourseJson(courseID, coursesPath string) (string, error) {
 	courseJson, err := os.ReadFile(courseJsonPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("course.json does not exist")
+			return "", fmt.Errorf("course.json for course '%s' does not exist", courseID)
 		}
 		return "", err
 	}

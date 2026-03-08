@@ -2,6 +2,7 @@ package course
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 	"time"
@@ -29,15 +30,20 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 
 	progressJson, err := os.ReadFile(progressPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		// ファイルが存在しない場合は無視
+		if !os.IsNotExist(err) {
 			return err
 		}
-	} else if len(progressJson) > 0 {
+	}
+
+	if len(progressJson) > 0 {
+		// 中身がある場合
 		err = json.Unmarshal(progressJson, &progresses)
 		if err != nil {
 			return err
 		}
 	} else {
+		// 中身がない場合
 		progresses = []Progress{}
 	}
 
@@ -85,20 +91,34 @@ func ResetProgress(courseID, progressPath string) error {
 
 	progressJson, err := os.ReadFile(progressPath)
 	if err != nil {
-		return err
+		// ファイルが存在しない場合は無視
+		if !os.IsNotExist(err) {
+			return err
+		}
 	}
-	err = json.Unmarshal(progressJson, &progresses)
-	if err != nil {
-		return err
-	}
-	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
 
+	if len(progressJson) > 0 {
+		// 中身がある場合
+		err = json.Unmarshal(progressJson, &progresses)
+		if err != nil {
+			return err
+		}
+	} else {
+		// 中身がない場合
+		progresses = []Progress{}
+	}
+
+	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
 	idx := -1
 	for i, p := range progresses {
 		if p.CourseID == courseID {
 			idx = i
 			break
 		}
+	}
+
+	if idx == -1 {
+		return fmt.Errorf("course not found: %s", courseID)
 	}
 
 	progresses = append(progresses[:idx], progresses[idx+1:]...)
@@ -118,13 +138,26 @@ func ResetProgress(courseID, progressPath string) error {
 
 func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, error) {
 
+	var progresses []Progress
+
 	progressJson, err := os.ReadFile(progressPath)
 	if err != nil {
-		return NotStarted, "", err
+		if !os.IsNotExist(err) {
+			// "ファイルが存在しない"以外のエラーの場合
+			return NotStarted, "", err
+		}
 	}
 
-	var progresses []Progress
-	json.Unmarshal(progressJson, &progresses)
+	if len(progressJson) > 0 {
+		// 中身がある場合
+		err = json.Unmarshal(progressJson, &progresses)
+		if err != nil {
+			return NotStarted, "", err
+		}
+	} else {
+		// 中身がない場合
+		progresses = []Progress{}
+	}
 
 	for _, p := range progresses {
 		if p.CourseID == courseID {

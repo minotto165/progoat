@@ -88,7 +88,7 @@ func startCourse(courseID string) error {
 
 	switch progressStatus {
 	case course.Completed:
-		huh.NewSelect[string]().
+		err = huh.NewSelect[string]().
 			Title("Course already completed.").
 			Options(
 				huh.NewOption("Keep current code", "keep"),
@@ -96,7 +96,7 @@ func startCourse(courseID string) error {
 			).Value(&action).WithTheme(huh.ThemeBase()).Run()
 
 	case course.InProgress:
-		huh.NewSelect[string]().
+		err = huh.NewSelect[string]().
 			Title("Course in progress.").
 			Options(
 				huh.NewOption("Continue", "continue"),
@@ -105,6 +105,9 @@ func startCourse(courseID string) error {
 
 	default:
 		action = "keep"
+	}
+	if err != nil {
+		return err
 	}
 
 	if action == "reset" {
@@ -128,8 +131,10 @@ func startCourse(courseID string) error {
 	for i, l := range c.Lessons {
 
 		if action == "continue" {
-			if currentLesson != l.Title {
+			if currentLesson != l.ID {
 				continue
+			} else {
+				action = "keep"
 			}
 		}
 
