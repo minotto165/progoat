@@ -26,6 +26,11 @@ var statusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if len(progresses) == 0 {
+			fmt.Println("You have not started any courses yet.")
+			fmt.Println("Run 'progoat start' to continue your lesson!")
+			return nil
+		}
 
 		var lastProgress course.Progress
 		for _, p := range progresses {
@@ -53,7 +58,7 @@ var statusCmd = &cobra.Command{
 
 		fmt.Println("[ Current Session ]")
 		fmt.Printf("%-10s %s\n", "Course:", lastCourse.Title)
-		fmt.Printf("%-10s %s %d%% (%d/%d Lessons)\n", "Progress:", ui.DrawProgressbar(50, 30), percentage, len(lastProgress.CompletedLessons), lastProgress.TotalLessons)
+		fmt.Printf("%-10s %s %d%% (%d/%d Lessons)\n", "Progress:", ui.DrawProgressbar(float64(percentage), 30), percentage, len(lastProgress.CompletedLessons), lastProgress.TotalLessons)
 		fmt.Printf("%-10s %s\n", "Next:", lastProgress.CurrentLesson)
 
 		fmt.Print("\n")
@@ -94,9 +99,6 @@ var statusCmd = &cobra.Command{
 
 			default:
 				status = "💤 Not Started"
-			}
-			if err != nil {
-				return err
 			}
 
 			fmt.Printf("%s %s %s\n",
