@@ -26,25 +26,9 @@ const (
 
 func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath string, totalLessons int) error {
 
-	var progresses []Progress
-
-	progressJson, err := os.ReadFile(progressPath)
+	progresses, err := loadProgresses(progressPath)
 	if err != nil {
-		// ファイルが存在しない場合は無視
-		if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	if len(progressJson) > 0 {
-		// 中身がある場合
-		err = json.Unmarshal(progressJson, &progresses)
-		if err != nil {
-			return err
-		}
-	} else {
-		// 中身がない場合
-		progresses = []Progress{}
+		return err
 	}
 
 	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
@@ -72,7 +56,7 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 	progresses[idx].LastAccessed = time.Now()
 	progresses[idx].TotalLessons = totalLessons
 
-	progressJson, err = json.MarshalIndent(progresses, "", "  ")
+	progressJson, err := json.MarshalIndent(progresses, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -87,25 +71,9 @@ func SaveProgress(courseID, completedLessonID, currentLessonID, progressPath str
 
 func ResetProgress(courseID, progressPath string) error {
 
-	var progresses []Progress
-
-	progressJson, err := os.ReadFile(progressPath)
+	progresses, err := loadProgresses(progressPath)
 	if err != nil {
-		// ファイルが存在しない場合は無視
-		if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	if len(progressJson) > 0 {
-		// 中身がある場合
-		err = json.Unmarshal(progressJson, &progresses)
-		if err != nil {
-			return err
-		}
-	} else {
-		// 中身がない場合
-		progresses = []Progress{}
+		return err
 	}
 
 	// progressesからcourseIDを検索し、インデックスを取得 -> idx int
@@ -123,7 +91,7 @@ func ResetProgress(courseID, progressPath string) error {
 
 	progresses = append(progresses[:idx], progresses[idx+1:]...)
 
-	progressJson, err = json.MarshalIndent(progresses, "", "  ")
+	progressJson, err := json.MarshalIndent(progresses, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -138,25 +106,9 @@ func ResetProgress(courseID, progressPath string) error {
 
 func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, error) {
 
-	var progresses []Progress
-
-	progressJson, err := os.ReadFile(progressPath)
+	progresses, err := loadProgresses(progressPath)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			// "ファイルが存在しない"以外のエラーの場合
-			return NotStarted, "", err
-		}
-	}
-
-	if len(progressJson) > 0 {
-		// 中身がある場合
-		err = json.Unmarshal(progressJson, &progresses)
-		if err != nil {
-			return NotStarted, "", err
-		}
-	} else {
-		// 中身がない場合
-		progresses = []Progress{}
+		return NotStarted, "", err
 	}
 
 	for _, p := range progresses {
@@ -173,4 +125,27 @@ func LoadProgressStatus(courseID, progressPath string) (ProgressStatus, string, 
 		}
 	}
 	return NotStarted, "", nil
+}
+
+func loadProgresses(progressPath string) ([]Progress, error) {
+	progressJson, err := os.ReadFile(progressPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			// "ファイルが存在しない"以外のエラーの場合
+			return []Progress{}, err
+		}
+	}
+
+	if len(progressJson) > 0 {
+		// 中身がある場合
+		var progresses []Progress
+		err = json.Unmarshal(progressJson, &progresses)
+		if err != nil {
+			return []Progress{}, err
+		}
+		return progresses, nil
+	} else {
+		// 中身がない場合
+		return []Progress{}, nil
+	}
 }
