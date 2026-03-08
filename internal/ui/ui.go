@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/charmbracelet/glamour"
 	tsize "github.com/kopoli/go-terminal-size"
@@ -40,4 +41,13 @@ func RenderWithTerminalWidth(raw string) (string, error) {
 		return "", err
 	}
 	return out, nil
+}
+
+func DrawProgressbar(percent float64, total float64) string {
+	filled := int(percent / 100 * total)
+	total_i := int(total)
+	return fmt.Sprintf("[%s%s]",
+		strings.Repeat("█", filled),
+		strings.Repeat("░", total_i-filled),
+	)
 }
