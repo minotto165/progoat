@@ -2,8 +2,14 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"regexp"
+	"sort"
+	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/minotto165/progoat/internal/course"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	"github.com/mozilla-ai/any-llm-go/providers/anthropic"
@@ -17,7 +23,7 @@ func GenerateCourse(prompt, length, coursesPath string) (string, error) {
 
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
-	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
+	activeModel := viper.GetString(fmt.Sprintf("providers.%s.gen_model", activeProvider))
 	activeApiKey := viper.GetString(fmt.Sprintf("providers.%s.api_key", activeProvider))
 
 	// Set model
@@ -126,7 +132,7 @@ Strictly follow these language requirements:
 func GenerateJudgement(task, code, out, modelOut string) (string, error) {
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
-	activeModel := viper.GetString(fmt.Sprintf("providers.%s.model", activeProvider))
+	activeModel := viper.GetString(fmt.Sprintf("providers.%s.judge_model", activeProvider))
 	activeApiKey := viper.GetString(fmt.Sprintf("providers.%s.api_key", activeProvider))
 
 	// Set model
@@ -192,3 +198,131 @@ func GenerateJudgement(task, code, out, modelOut string) (string, error) {
 	}
 	return response.Choices[0].Message.ToolCalls[0].Function.Arguments, nil
 }
+
+//---------------------------
+// ↓ VIBE-CODED
+//---------------------------
+
+type geminiModel struct {
+	Name        string `json:"name"`        // e.g. "models/gemini-2.5-pro"
+	DisplayName string `json:"displayName"` // e.g. "Gemini 2.5 Pro"
+}
+
+type geminiListModelsResponse struct {
+	Models []geminiModel `json:"models"`
+}
+
+var reGeminiVersion = regexp.MustCompile(`^gemini-(\d+)(?:\.(\d+))?-`)
+
+func isStandardGemini(id string) bool {
+	if !strings.HasPrefix(id, "gemini-") {
+		return false
+	}
+	excludes := []string{
+		"tts", "audio", "image-generation", "embedding",
+		"computer-use", "deep-research", "robotics",
+		"nano", "custom",
+	}
+	lower := strings.ToLower(id)
+	for _, kw := range excludes {
+		if strings.Contains(lower, kw) {
+			return false
+		}
+	}
+
+	parts := strings.Split(id, "-")
+	last := parts[len(parts)-1]
+	if matched, _ := regexp.MatchString(`^\d{3}$`, last); matched {
+		return false
+	}
+	return true
+}
+
+func geminiVersionKey(id string) string {
+	if strings.Contains(id, "latest") {
+		return "zzz-" + id
+	}
+
+	major, minor := "000", "000"
+	if m := reGeminiVersion.FindStringSubmatch(id); m != nil {
+		major = fmt.Sprintf("%03s", m[1])
+		if m[2] != "" {
+			minor = fmt.Sprintf("%03s", m[2])
+		}
+	}
+
+	// preview 付きは同バージョン内で後ろ（"z" プレフィックス）
+	preview := "a"
+	if strings.Contains(id, "preview") {
+		preview = "z"
+	}
+
+	return fmt.Sprintf("%s-%s-%s-%s", major, minor, preview, id)
+}
+
+func FetchGeminiModels(ctx context.Context, apiKey string) ([]huh.Option[string], error) {
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models?key=%s", apiKey)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ListModels returned HTTP %d", resp.StatusCode)
+	}
+
+	var result geminiListModelsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	type entry struct {
+		id    string
+		label string
+	}
+	var entries []entry
+
+	for _, m := range result.Models {
+		id := m.Name
+		if len(id) > 7 && id[:7] == "models/" {
+			id = id[7:]
+		}
+		if !isStandardGemini(id) {
+			continue
+		}
+		label := m.DisplayName
+		if label == "" {
+			label = id
+		}
+		if !strings.HasPrefix(label, "Gemini") {
+			continue
+		}
+		entries = append(entries, entry{id: id, label: label})
+	}
+
+	// バージョン昇順ソート（新しいものが下、latest は末尾）
+	sort.Slice(entries, func(i, j int) bool {
+		return geminiVersionKey(entries[j].id) < geminiVersionKey(entries[i].id)
+	})
+
+	var options []huh.Option[string]
+	for _, e := range entries {
+		options = append(options, huh.NewOption(e.label, e.id))
+	}
+
+	if len(options) == 0 {
+		return nil, fmt.Errorf("no models returned")
+	}
+	return options, nil
+}
+
+//---------------------------
+// ↑ VIBE-CODED
+//---------------------------
