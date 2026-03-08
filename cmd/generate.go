@@ -40,8 +40,17 @@ AI will create lessons, including slides and coding exercises.`,
 				huh.NewGroup(
 					huh.NewText().
 						Title("Prompt").
-						Description("Enter what you want to learn...").
+						Description("Enter what you want to learn.").
 						Value(&prompt),
+					huh.NewSelect[string]().
+						Title("Length").
+						Description("Choose the depth and number of lessons for this course.").
+						Options(
+							huh.NewOption("Short", "short"),
+							huh.NewOption("Medium", "medium"),
+							huh.NewOption("Long", "long"),
+						).
+						Value(&length),
 				),
 			).WithTheme(huh.ThemeBase())
 			err := form.Run()
