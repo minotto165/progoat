@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version = "v0.1.0"
+
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:          "version",
@@ -16,7 +18,7 @@ var versionCmd = &cobra.Command{
 	Long:         `Display the current version number of Progoat.`,
 	SilenceUsage: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("version called")
+		fmt.Println(version)
 	},
 }
 
