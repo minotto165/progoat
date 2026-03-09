@@ -186,7 +186,7 @@ func startCourse(courseID string) error {
 
 			title = fmt.Sprint(c.Title, " - ", l.Title, ": Result")
 			fmt.Println(title)
-			response, err := judge(l, c.ProgrammingLanguage, filePath)
+			response, err := judge(c, l, c.ProgrammingLanguage, filePath)
 
 			//for DEBUG...
 			// response, err = JudgeResult{
@@ -256,7 +256,7 @@ func startCourse(courseID string) error {
 	return nil
 }
 
-func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error) {
+func judge(course course.Course, lesson course.Lesson, language, filePath string) (JudgeResult, error) {
 
 	var judgeResult JudgeResult
 
@@ -278,7 +278,9 @@ func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error)
 	if err != nil {
 		return judgeResult, err
 	}
-	fmt.Print(out)
+	if output != "" {
+		fmt.Print(out)
+	}
 
 	code, err := os.ReadFile(filePath)
 	if err != nil {
@@ -292,7 +294,7 @@ func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error)
 
 	code_s := string(code)
 
-	response, err := llm.GenerateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput)
+	response, err := llm.GenerateJudgement(lesson.TaskDescription, code_s, output, lesson.CorrectOutput, course.Title, lesson.Title)
 	s.Stop()
 	if err != nil {
 		return judgeResult, err
@@ -324,7 +326,7 @@ func run(language, filePath string) (string, error) {
 
 	args, ok := commands[language]
 	if !ok {
-		return "", fmt.Errorf("unsupported language: %s", language)
+		return "", nil
 	}
 
 	finalArgs := append(args, filePath)

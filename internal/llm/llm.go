@@ -129,7 +129,7 @@ Strictly follow these language requirements:
 
 }
 
-func GenerateJudgement(task, code, out, modelOut string) (string, error) {
+func GenerateJudgement(task, code, out, modelOut, courseTitle, lessonTitle string) (string, error) {
 	// Set informations
 	activeProvider := viper.GetString("active_provider")
 	activeModel := viper.GetString(fmt.Sprintf("providers.%s.judge_model", activeProvider))
@@ -163,12 +163,14 @@ func GenerateJudgement(task, code, out, modelOut string) (string, error) {
 		Messages: []anyllm.Message{
 			{
 				Role:    anyllm.RoleSystem,
-				Content: `You are a programming instructor. Compare the student's code and output with the task and model answer. Check if the logic and the output meet the requirements. use Markdown.`,
+				Content: `You are a programming instructor. Judge strictly by the code syntax. Treat output as secondary. If correct, keep feedback very brief without redundant explanations or mentioning missing output. Provide feedback in the student's language using Markdown.`,
 			},
 			{Role: anyllm.RoleUser, Content: "Task:" + task},
 			{Role: anyllm.RoleUser, Content: "Model Output:" + modelOut},
 			{Role: anyllm.RoleUser, Content: "Student Code:" + code},
 			{Role: anyllm.RoleUser, Content: "Student Output:" + out},
+			{Role: anyllm.RoleUser, Content: "Course Title:" + courseTitle},
+			{Role: anyllm.RoleUser, Content: "Lesson Title:" + lessonTitle},
 		},
 		Tools: []anyllm.Tool{
 			{
