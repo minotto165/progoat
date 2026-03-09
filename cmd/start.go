@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -307,33 +308,38 @@ func judge(lesson course.Lesson, language, filePath string) (JudgeResult, error)
 }
 
 func run(language, filePath string) (string, error) {
-	cmd := exec.Command("")
-	executable := true
-	switch language {
-	case "go":
-		cmd = exec.Command("go", "run", filePath)
-	case "py":
-		cmd = exec.Command("python", filePath)
-	default:
-		executable = false
-		switch language {
-		case "html":
-			browser.OpenFile(filePath)
-		}
+	commands := map[string][]string{
+		"go":  {"go", "run"},  // Go
+		"py":  getPythonCmd(), // Python
+		"js":  {"node"},       // JavaScrip
+		"ts":  {"tsx"},        // TypeScript
+		"rb":  {"ruby"},       // Ruby
+		"php": {"php"},        // PHP
 	}
 
-	output_s := ""
-	if executable {
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return "", err
-		}
-		output_s = string(output)
-	} else {
-		output_s = fmt.Sprint("no output with ", language)
+	if language == "html" {
+		browser.OpenFile(filePath)
+		return "Opened in browser", nil
 	}
 
-	return output_s, nil
+	args, ok := commands[language]
+	if !ok {
+		return "", fmt.Errorf("unsupported language: %s", language)
+	}
+
+	finalArgs := append(args, filePath)
+
+	cmd := exec.Command(finalArgs[0], finalArgs[1:]...)
+
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
+func getPythonCmd() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"py", "-3"}
+	}
+	return []string{"python3"}
 }
 
 func init() {
