@@ -62,7 +62,10 @@ Strictly follow these language requirements:
 4. Use markdown for the slides to make them easy to read.
 5. Course ID should be short and super simple.
 6. Course Title should be simple.
-7. The first slide of the first lesson MUST be a "Setup Guide". It should explain how to install the necessary environment for the language and how to run the code on a local machine.`,
+7. The first slide of the first lesson MUST be a "Setup Guide". It should explain how to install the necessary environment for the language and how to run the code on a local machine.
+8. The "initial_code" MUST be an INCOMPLETE boilerplate. It should provide the basic structure (e.g., package declaration, imports, function signatures), but the core logic required to solve the task MUST be left blank or replaced with a TODO comment.
+9. Use "// TODO:" or "/* TODO: */" comments (in the user's language) to clearly indicate where the student needs to write their code.
+10. Ensure the "initial_code" is not a finished solution. The goal is for the student to implement the logic themselves.`,
 			},
 			{
 				Role:    anyllm.RoleUser,
