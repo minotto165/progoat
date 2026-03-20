@@ -1,0 +1,9 @@
+# THANK YOU GEMINI
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+    # コンテナが勝手に終了しないようにする設定
+    tty: true
+    stdin_open: true
